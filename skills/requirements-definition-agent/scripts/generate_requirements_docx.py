@@ -7,6 +7,7 @@
 JSONスキーマは requirements_schema.py のdocstringを参照。
 """
 
+import os
 import sys
 
 from docx import Document
@@ -15,7 +16,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor
 
-sys.path.insert(0, __file__.rsplit("/", 1)[0])
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import requirements_schema as schema  # noqa: E402
 
 JP_FONT = "游ゴシック"

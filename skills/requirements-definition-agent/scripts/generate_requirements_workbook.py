@@ -12,13 +12,14 @@ JSONスキーマは requirements_schema.py のdocstringを参照。
 （行が無い分類は、誰も見落としに気づけないため）。
 """
 
+import os
 import sys
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-sys.path.insert(0, __file__.rsplit("/", 1)[0])
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import requirements_schema as schema  # noqa: E402
 
 HEADER_FILL = PatternFill("solid", fgColor="1F4E79")
