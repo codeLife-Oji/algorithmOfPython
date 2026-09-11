@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="理想の自分をつくる100の法則。十章・百則の実践帳。">
+<title>理想の自分をつくる100の法則</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+  :root{
+    color-scheme: light;
+    --ground:#E6E9E3;
+    --surface:#F8F9F5;
+    --surface-2:#EEF1EA;
+    --ink:#191D19;
+    --ink-2:#474E47;
+    --muted:#7B827A;
+    --line:#CDD3C9;
+    --line-soft:#DEE3DA;
+    --accent:#2C6157;
+    --accent-ink:#F8F9F5;
+    --accent-soft:#CDDCD5;
+    --seal:#A8402F;
+    --shadow:0 1px 0 rgba(25,29,25,.06);
+    --display:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",YuMincho,serif;
+    --body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",Meiryo,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --ground:#141714;
+      --surface:#1C201B;
+      --surface-2:#232823;
+      --ink:#E7EBE3;
+      --ink-2:#B3BAB1;
+      --muted:#878E85;
+      --line:#343B34;
+      --line-soft:#2A302A;
+      --accent:#7CBFAF;
+      --accent-ink:#12170F;
+      --accent-soft:#26433C;
+      --seal:#D8826F;
+      --shadow:0 1px 0 rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --ground:#141714;
+    --surface:#1C201B;
+    --surface-2:#232823;
+    --ink:#E7EBE3;
+    --ink-2:#B3BAB1;
+    --muted:#878E85;
+    --line:#343B34;
+    --line-soft:#2A302A;
+    --accent:#7CBFAF;
+    --accent-ink:#12170F;
+    --accent-soft:#26433C;
+    --seal:#D8826F;
+    --shadow:0 1px 0 rgba(0,0,0,.3);
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--ink);
+    font-family:var(--body);
+    font-size:16px;
+    line-height:1.75;
+    font-feature-settings:"palt" 1;
+  }
+  img{max-width:100%}
+  [hidden]{display:none !important}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important;transition:none !important;scroll-behavior:auto !important}
+  }
+  html{scroll-behavior:smooth}
+
+  .sheet{
+    max-width:880px;
+    margin:0 auto;
+    padding-inline:20px;
+    padding-block:0 72px;
+    display:flex;
+    flex-direction:column;
+    gap:44px;
+  }
+
+  /* ── 標題 ───────────────────────────── */
+  .masthead{padding-block:56px 0;border-bottom:1px solid var(--line);padding-bottom:32px}
+  .eyebrow{
+    margin:0;
+    font-family:var(--display);
+    font-size:.8rem;
+    letter-spacing:.34em;
+    color:var(--muted);
+    text-indent:.34em;
+  }
+  h1{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:clamp(2rem,6.2vw,3.15rem);
+    line-height:1.32;
+    letter-spacing:.02em;
+    margin:.5rem 0 0;
+    text-wrap:balance;
+  }
+  h1 .num{
+    font-size:1.16em;
+    color:var(--accent);
+    font-feature-settings:"palt" 0;
+    padding-inline:.06em;
+  }
+  .lede{
+    margin:1.1rem 0 0;
+    max-width:34em;
+    color:var(--ink-2);
+    font-size:1rem;
+  }
+
+  /* ── 百目盤 ─────────────────────────── */
+  .board{
+    display:grid;
+    grid-template-columns:minmax(0,460px) minmax(0,1fr);
+    gap:36px;
+    align-items:start;
+  }
+  .board-grid{
+    display:grid;
+    grid-template-columns:1.6rem repeat(10,minmax(0,1fr));
+    gap:5px;
+    align-items:center;
+  }
+  .kanji{
+    font-family:var(--display);
+    font-size:.9rem;
+    color:var(--muted);
+    text-align:center;
+    line-height:1;
+    user-select:none;
+  }
+  .cell{
+    all:unset;
+    aspect-ratio:1;
+    width:100%;
+    border:1px solid var(--line);
+    background:var(--surface);
+    cursor:pointer;
+    position:relative;
+    transition:background .16s ease,border-color .16s ease,transform .16s ease;
+  }
+  .cell:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .cell:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .cell[data-done="1"]{background:var(--accent);border-color:var(--accent)}
+  .cell[data-today="1"]::after{
+    content:"";
+    position:absolute;
+    inset:auto 2px 2px auto;
+    width:5px;height:5px;
+    background:var(--seal);
+    border-radius:50%;
+  }
+
+  .board-side{display:flex;flex-direction:column;gap:10px}
+  .tally{
+    font-family:var(--display);
+    font-size:2.6rem;
+    line-height:1;
+    letter-spacing:.01em;
+    font-variant-numeric:tabular-nums;
+    display:flex;
+    align-items:baseline;
+    gap:.12em;
+  }
+  .tally .done{color:var(--accent);font-weight:700}
+  .tally .slash{color:var(--line);font-size:.8em}
+  .tally .total{color:var(--muted);font-size:.8em}
+  .tally-label{margin:0;font-size:.78rem;letter-spacing:.16em;color:var(--muted)}
+  .meter{height:3px;background:var(--line-soft);overflow:hidden}
+  .meter span{display:block;height:100%;width:0;background:var(--accent);transition:width .3s ease}
+  .side-note{margin:.4rem 0 0;font-size:.72rem;line-height:1.6;color:var(--muted)}
+  .ghost{
+    all:unset;
+    align-self:flex-start;
+    font-size:.76rem;
+    letter-spacing:.1em;
+    color:var(--muted);
+    border-bottom:1px solid var(--line);
+    padding-bottom:2px;
+    cursor:pointer;
+  }
+  .ghost:hover{color:var(--seal);border-color:var(--seal)}
+
+  /* ── 今日の一法則 ───────────────────── */
+  .today{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-left:3px solid var(--seal);
+    padding:26px 28px;
+  }
+  .today-mark{
+    display:inline-block;
+    font-family:var(--display);
+    font-size:.72rem;
+    letter-spacing:.22em;
+    text-indent:.22em;
+    color:var(--seal);
+    border:1px solid var(--seal);
+    padding:2px 9px 3px;
+    line-height:1.5;
+    margin-right:.9em;
+    white-space:nowrap;
+  }
+  .today h2{
+    font-family:var(--display);
+    font-size:1.3rem;
+    line-height:1.5;
+    margin:0;
+    font-weight:700;
+    text-wrap:balance;
+  }
+  .today-num{
+    margin:0 0 .55rem;
+    font-family:var(--display);
+    font-size:.8rem;
+    letter-spacing:.22em;
+    color:var(--muted);
+    font-variant-numeric:tabular-nums;
+  }
+  .today p.act{margin:.35rem 0 0;color:var(--ink-2);font-size:.94rem}
+
+  /* ── 章目次 ─────────────────────────── */
+  .toc{display:flex;flex-wrap:wrap;gap:7px}
+  .toc a{
+    font-size:.82rem;
+    text-decoration:none;
+    color:var(--ink-2);
+    border:1px solid var(--line);
+    background:var(--surface);
+    padding:5px 13px;
+    line-height:1.6;
+    transition:color .15s ease,border-color .15s ease;
+  }
+  .toc a:hover{color:var(--accent);border-color:var(--accent)}
+  .toc a b{font-family:var(--display);font-weight:500;color:var(--muted);margin-right:.45em}
+
+  /* ── 章と法則 ───────────────────────── */
+  .chapters{display:flex;flex-direction:column;gap:40px}
+  .chapter{scroll-margin-top:18px}
+  .chapter-head{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:baseline;
+    gap:14px;
+    border-bottom:1px solid var(--ink);
+    padding-bottom:9px;
+    margin-bottom:4px;
+  }
+  .chapter-kanji{
+    font-family:var(--display);
+    font-size:1.5rem;
+    font-weight:700;
+    line-height:1;
+  }
+  .chapter-name{margin:0;font-family:var(--display);font-size:1.12rem;font-weight:500;letter-spacing:.06em}
+  .chapter-name small{display:block;font-family:var(--body);font-size:.76rem;letter-spacing:.04em;color:var(--muted);font-weight:400;margin-top:3px}
+  .chapter-count{
+    font-family:var(--display);
+    font-size:.82rem;
+    color:var(--muted);
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+  }
+  .chapter-count b{color:var(--accent)}
+
+  .rule{
+    display:grid;
+    grid-template-columns:22px 3.1rem minmax(0,1fr);
+    gap:0 14px;
+    align-items:start;
+    padding:14px 0;
+    border-bottom:1px solid var(--line-soft);
+  }
+  .rule:last-child{border-bottom:none}
+  .tick{
+    all:unset;
+    width:17px;height:17px;
+    margin-top:.42em;
+    border:1px solid var(--line);
+    background:var(--surface);
+    cursor:pointer;
+    display:grid;
+    place-items:center;
+    transition:background .15s ease,border-color .15s ease;
+  }
+  .tick:hover{border-color:var(--accent)}
+  .tick:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .tick svg{width:11px;height:11px;opacity:0;stroke:var(--accent-ink);stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .rule[data-done="1"] .tick{background:var(--accent);border-color:var(--accent)}
+  .rule[data-done="1"] .tick svg{opacity:1}
+  .rule-no{
+    font-family:var(--display);
+    font-size:1.02rem;
+    color:var(--muted);
+    font-variant-numeric:tabular-nums;
+    letter-spacing:.04em;
+    line-height:1.72;
+  }
+  .rule[data-done="1"] .rule-no{color:var(--accent)}
+  .rule h3{
+    margin:0;
+    font-size:1.02rem;
+    font-weight:500;
+    line-height:1.7;
+    letter-spacing:.01em;
+  }
+  .rule p{margin:.2rem 0 0;font-size:.9rem;color:var(--ink-2);line-height:1.78}
+  .rule[data-done="1"] h3{color:var(--muted)}
+  .rule.flash{animation:flash 1.1s ease}
+  @keyframes flash{0%{background:var(--accent-soft)}100%{background:transparent}}
+
+  footer{
+    border-top:1px solid var(--line);
+    padding-top:22px;
+    color:var(--muted);
+    font-size:.78rem;
+    line-height:1.9;
+  }
+  footer b{font-family:var(--display);font-weight:500;color:var(--ink-2)}
+
+  @media (max-width:640px){
+    .board{grid-template-columns:minmax(0,1fr);gap:22px}
+    .board-side{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:8px 18px}
+    .board-side .meter{flex:1 1 100%}
+    .board-side .side-note{flex:1 1 100%}
+    .today{padding:22px}
+    .today-mark{display:block;margin:0 0 .6rem;width:max-content}
+    .rule{grid-template-columns:22px 2.7rem minmax(0,1fr);gap:0 10px}
+    .board-grid{grid-template-columns:1.2rem repeat(10,minmax(0,1fr));gap:4px}
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">十章 ／ 百則</p>
+    <h1>理想の自分をつくる<span class="num">100</span>の法則</h1>
+    <p class="lede">才能ではなく、設計と反復で人は変わる。十の領域に百の法則を分け、どれも今日から手をつけられる大きさまで刻んだ実践帳です。読むためではなく、印をつけるためにあります。</p>
+  </header>
+
+  <section class="board" aria-labelledby="board-h">
+    <h2 id="board-h" class="eyebrow" style="grid-column:1/-1;margin-bottom:-16px">百目盤</h2>
+    <div class="board-grid" id="board"></div>
+    <div class="board-side">
+      <p class="tally"><span class="done" id="tallyDone">0</span><span class="slash">/</span><span class="total">100</span></p>
+      <p class="tally-label">実行した法則</p>
+      <div class="meter"><span id="meterFill"></span></div>
+      <p class="side-note">升目を押すとその法則へ移動します。記録はこの端末のブラウザだけに保存され、どこにも送信されません。</p>
+      <button class="ghost" id="resetBtn" type="button">記録を消す</button>
+    </div>
+  </section>
+
+  <section class="today" aria-labelledby="today-h">
+    <p class="today-num"><span class="today-mark">今日の一法則</span><span id="todayNo">第000則</span></p>
+    <h2 id="today-h">—</h2>
+    <p class="act" id="todayAct">—</p>
+  </section>
+
+  <nav class="toc" id="toc" aria-label="章目次"></nav>
+
+  <main class="chapters" id="chapters"></main>
+
+  <footer>
+    <p><b>使い方</b> — 上から順に読む必要はありません。いま弱いと感じる章をひとつ選び、その十則のうち一つだけに印をつけて一週間続けます。続いたら次へ。百則すべてを同時に始めることだけが、唯一の失敗です。</p>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var CHAPTERS = [
+    { kanji:"一", name:"自己認識", sub:"現在地を測る", rules:[
+      ["理想像を他人の言葉で語らない","「すごい人」ではなく「何ができる人か」を、自分の語彙で紙に書き出す。"],
+      ["現在地を数字で把握する","体重・貯蓄・可処分時間・読了冊数など、五つの指標を今日のうちに測る。"],
+      ["強みは「疲れないこと」から探す","成果ではなく、他人より苦なく続けられた行動を三つ書き出す。"],
+      ["弱みは直すものと避けるものに分ける","致命的でない弱みは改善せず、人に任せるか仕組みで回避する。"],
+      ["自己評価を他人の反応から切り離す","評価が下がった日でも、行動の記録が残っていればその日は成功とみなす。"],
+      ["一日の終わりに三行だけ書く","やったこと・感じたこと・明日変えること。それ以上は書かない。"],
+      ["「なりたい」ではなく「なっている」で書く","理想を現在形の文章に直し、毎日目に入る場所へ置く。"],
+      ["比較の基準を自分の過去に固定する","他人ではなく「三か月前の自分」だけを比較対象にする。"],
+      ["自分の取扱説明書をつくる","集中できる時間帯・環境・回復方法を一枚にまとめて保存する。"],
+      ["年に一度、理想像を更新する","古い理想に縛られていないか棚卸しし、書き換えを自分に許可する。"]
+    ]},
+    { kanji:"二", name:"目標設計", sub:"願望を計画に変える", rules:[
+      ["目標は動詞で書く","「英語ができる」ではなく「毎朝二十分音読する」と行動に落とす。"],
+      ["期限のない目標は願望と呼ぶ","すべての目標に日付を入れ、カレンダーへ実際に記入する。"],
+      ["追う目標は三つまでに絞る","四つ目以降は捨てずに「保留リスト」へ送り、視界から外す。"],
+      ["ゴールから逆算して最初の一歩を決める","最終形から遡り、今週中に終わる最小の一歩を一つだけ書く。"],
+      ["成果目標と行動目標を分ける","制御できない成果ではなく、制御できる行動の量で自分を評価する。"],
+      ["やらないことを同時に決める","目標を一つ立てたら、そのために捨てる活動を必ず一つ決める。"],
+      ["進捗は週次で確認する","毎週同じ曜日・同じ時刻に、十五分の点検枠を固定する。"],
+      ["目標を人に宣言する","少なくとも一人に期限つきで共有し、報告する日を約束する。"],
+      ["目標は下方修正してよい","届かない目標は捨てるのではなく、続けられる大きさまで下げる。"],
+      ["達成後の次を先に決めておく","ゴール直後の空白で止まらないよう、次の一手を事前に用意する。"]
+    ]},
+    { kanji:"三", name:"習慣", sub:"意志を仕組みに置き換える", rules:[
+      ["小さすぎる量から始める","腕立て一回、一行読書。失敗しようがない量で開始する。"],
+      ["既存の習慣に接続する","「歯磨きのあとに」など、すでにある行動の直後へ新しい習慣を置く。"],
+      ["時間ではなく場所を決める","行動する場所を固定し、その場所では他のことをしない。"],
+      ["着手までの摩擦を一秒減らす","道具を前夜に出す、アプリを一画面目に置く。手数そのものを削る。"],
+      ["やめたい習慣は入口を遠ざける","我慢に頼らず、二十秒余計にかかる場所へ物理的に移す。"],
+      ["記録は行動の直後につける","達成をその場で可視化し、記録すること自体を報酬にする。"],
+      ["二日連続では休まない","一日の中断は許容し、二日目は最小単位でも必ず実行する。"],
+      ["調子が悪い日も形を変えない","同じ時刻・同じ場所のまま、量だけを減らして続ける。"],
+      ["二十一日ではなく六十六日を見込む","定着には二か月以上かかる前提で、初期の苦しさを織り込む。"],
+      ["習慣は一つずつ増やす","前の習慣が無意識になってから、次の習慣を追加する。"]
+    ]},
+    { kanji:"四", name:"時間", sub:"有限の資源を配分する", rules:[
+      ["時間は余ったら使うものではない","重要なことを先に予定表へ入れ、残った時間で他を回す。"],
+      ["一日の使い方を一度だけ実測する","二十四時間を十五分単位で記録し、想像とのズレを直視する。"],
+      ["朝の九十分を最重要の仕事に充てる","判断力が高い時間帯を、最も難しい一つに固定配分する。"],
+      ["会議と移動に上限を設ける","週あたりの合計時間を決め、超える分は断るか短縮する。"],
+      ["十五分の隙間に置く作業を決めておく","隙間用のタスクを五つ用意し、何をするか迷う時間をなくす。"],
+      ["同時進行を自分に禁じる","一つの画面・一つのタブ・一つの作業に絞り、切替回数を数える。"],
+      ["通知を切ってから作業に入る","集中時間は機内モードにし、終了後にまとめて確認する。"],
+      ["終業時刻を先に決める","終わりを固定すると、量ではなく優先順位で調整するようになる。"],
+      ["「あとで」を今日の日付で予約する","保留にせず、着手する日時をその場でカレンダーに入れる。"],
+      ["何もしない時間を予定に入れる","回復のための空白を予定として確保し、決して埋めない。"]
+    ]},
+    { kanji:"五", name:"思考", sub:"判断の質を上げる", rules:[
+      ["事実と解釈を二列に分ける","起きたことと、自分の受け取り方を、別の列に書いて切り離す。"],
+      ["選択肢を三つ以上つくってから決める","二択に見えたときこそ、第三案を必ず一つ考え出す。"],
+      ["決断そのものに期限を置く","情報が揃わなくても期限で決め、決めたあとに調整する。"],
+      ["戻せる決断は即決する","やり直せることは迷わず決め、迷う時間を重い決断に回す。"],
+      ["「なぜ」を三回掘る","問題の表面で止めず、三段階下の原因まで言葉にする。"],
+      ["自説への最強の反論を自分で書く","反対意見を一段落書いてから、はじめて結論を出す。"],
+      ["うまくいった理由も分析する","失敗だけでなく成功も要因分解し、再現方法として残す。"],
+      ["前提を疑う質問を一つ持つ","「これが無くても成立するか」を定期的に自分へ問う。"],
+      ["情報は入口の数を決める","情報源をあらかじめ選び、それ以外は意図的に見ない。"],
+      ["考えるときは必ず書く","頭の中だけで回さず、紙か画面に出してから判断する。"]
+    ]},
+    { kanji:"六", name:"感情", sub:"揺れを敵にしない", rules:[
+      ["感情に正確な名前をつける","「嫌だ」で止めず、焦り・落胆・恥など具体的な語に言い換える。"],
+      ["反応する前に六秒待つ","怒りの初速をやり過ごしてから、使う言葉を選ぶ。"],
+      ["落ち込みは身体から回復させる","考え直す前に、睡眠・食事・散歩で土台を戻す。"],
+      ["不安は書き出して実寸を測る","起きる確率と、起きたときの対処を紙に書いて大きさを確かめる。"],
+      ["比較で傷ついたら画面を閉じる","比較を生む情報源から、感情が戻るまで物理的に離れる。"],
+      ["自分への言葉を他人基準にする","親友に言わない言葉は、自分にも言わない。"],
+      ["罪悪感は行動に変換する","悔やむ時間を、五分でできる行動一つに置き換える。"],
+      ["良かった日の条件も記録する","調子が良かった日の環境と行動を残し、再現できる形にする。"],
+      ["感情の波を周期として扱う","落ちる時期を前提に、低調時用の最小メニューを用意しておく。"],
+      ["最初に話す相手を決めておく","感情が大きく動いたとき、誰に話すかを平時のうちに決める。"]
+    ]},
+    { kanji:"七", name:"身体", sub:"すべての土台を整える", rules:[
+      ["睡眠を最優先の固定枠にする","起床時刻ではなく、就寝時刻のほうを先に固定する。"],
+      ["朝に光を浴びる","起床後一時間以内に、屋外の光を十分間浴びる。"],
+      ["運動を移動に混ぜる","通勤や買い物を歩行と階段に置き換え、別枠の時間を不要にする。"],
+      ["週二回は筋肉に負荷をかける","自重でよいので、週二回、少し苦しい強度を入れる。"],
+      ["食事は引き算で整える","足す前に、間食・飲酒・夜遅い食事のどれかを一つ減らす。"],
+      ["集中が切れたら先に水を飲む","休憩や糖分より前に、水分を取って様子を見る。"],
+      ["六十分に一度は立つ","一時間ごとに立ち上がり、二分歩いてから戻る。"],
+      ["体調の記録は一指標だけにする","体重か睡眠時間か、続けられる一つだけを毎日つける。"],
+      ["二週間続く不調は専門家へ渡す","自己判断を打ち切る期限を、あらかじめ決めておく。"],
+      ["疲れている日に決断しない","重要な判断を、睡眠不足の日には持ち込まない。"]
+    ]},
+    { kanji:"八", name:"学習", sub:"伸び続ける形をつくる", rules:[
+      ["入力と出力を必ず組にする","学んだら、書く・話す・作るのいずれかを同じ日に行う。"],
+      ["教えられる形まで理解する","三分で人に説明できるかどうかを、理解度の基準にする。"],
+      ["わからなかった箇所を記録する","つまずいた点をリスト化し、後日まとめて潰す。"],
+      ["二十五分だけ着手してから判断する","気が乗らない学習も、二十五分やってから続行を決める。"],
+      ["質より頻度を優先する","週に一度三時間より、毎日二十分を選ぶ。"],
+      ["教材は一つを終えてから次へ","並行して増やさず、一冊・一講座を完走してから移る。"],
+      ["復習日を学んだ日に予約する","一日後・一週間後・一か月後の三点を、その場で予定に入れる。"],
+      ["「知っている」と「できる」を分ける","知識は実際の場面で一度使ってから、はじめて完了とする。"],
+      ["学びを一行にまとめる","学習の終わりに、要点を一行だけ書き残す。"],
+      ["七割できる難度に居続ける","楽にこなせる課題を避け、少し届かない場所を選び続ける。"]
+    ]},
+    { kanji:"九", name:"人間関係", sub:"環境を選び直す", rules:[
+      ["会う相手を意識して選ぶ","会ったあとに消耗する相手との時間を、少しずつ減らす。"],
+      ["先に与える","求める前に、相手の役に立つ情報や手助けを一つ渡す。"],
+      ["頼みごとは具体的にする","「助けてほしい」ではなく、期限と作業量を明示して頼む。"],
+      ["断る言葉を用意しておく","定型の断り文をつくり、その場で考えずに使えるようにする。"],
+      ["感謝は具体的に伝える","「ありがとう」に、何がどう助かったかを一文添える。"],
+      ["期待は口に出す","察してもらうのをやめ、望むことを言葉にして共有する。"],
+      ["批判は行動だけに限定する","人格ではなく、観測できた行動とその影響だけを指摘する。"],
+      ["大事な関係は頻度を決める","会う間隔をあらかじめ決め、予定表に入れてしまう。"],
+      ["自分より進んだ人の近くにいる","目標に近い人が集まる場所へ、月に一度は出向く。"],
+      ["関係を終える判断も持つ","続けること自体が目的化した関係からは、静かに距離をとってよい。"]
+    ]},
+    { kanji:"十", name:"継続", sub:"やめない設計", rules:[
+      ["完璧さより再開の速さを競う","途切れた翌日に戻れるかどうかを、最重要の指標にする。"],
+      ["記録を一か所に集める","分散させず、一つのノート・一つのアプリに集約する。"],
+      ["できなかった理由を仕組みに変える","意志の問題にせず、環境・時間・道具のどれかを必ず変える。"],
+      ["月末に三十分の振り返りをする","続いたこと・やめたこと・変えることを、三つだけ書く。"],
+      ["小さな達成を必ず祝う","節目ごとの報酬を、達成する前に具体的に決めておく。"],
+      ["やめる基準も先に決める","三か月続けて手応えがないものは、意図的に手放す。"],
+      ["停滞期を計画に含める","伸びない期間を異常ではなく標準として、最初から織り込む。"],
+      ["続いている証拠を目に入れる","記録や写真を、毎日必ず通る場所に置く。"],
+      ["自分ではなく環境を変える","意志に頼らず、選択の余地そのものを減らす環境を設計する。"],
+      ["今日、一つだけ実行する","百の法則から今日試す一つを選び、読み終える前に着手する。"]
+    ]}
+  ];
+
+  var KEY = "ideal100.done.v1";
+  var flat = [];
+  CHAPTERS.forEach(function(ch, ci){
+    ch.rules.forEach(function(r, ri){
+      flat.push({ n: ci*10 + ri + 1, title: r[0], act: r[1], ch: ci });
+    });
+  });
+
+  function load(){
+    try {
+      var raw = localStorage.getItem(KEY);
+      if(!raw) return {};
+      var o = JSON.parse(raw);
+      return (o && typeof o === "object") ? o : {};
+    } catch(e){ return {}; }
+  }
+  function save(state){
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){ /* 保存できない環境でも表示は続ける */ }
+  }
+  var done = load();
+
+  function pad(n){ return ("00" + n).slice(-3); }
+
+  /* ── 百目盤 ── */
+  var board = document.getElementById("board");
+  var boardFrag = document.createDocumentFragment();
+  var todayNo = (function(){
+    var now = new Date();
+    var start = new Date(now.getFullYear(), 0, 0);
+    var day = Math.floor((now - start) / 86400000);
+    return (day % 100) + 1;
+  })();
+
+  CHAPTERS.forEach(function(ch, ci){
+    var k = document.createElement("span");
+    k.className = "kanji";
+    k.textContent = ch.kanji;
+    k.setAttribute("aria-hidden", "true");
+    boardFrag.appendChild(k);
+    for(var i = 0; i < 10; i++){
+      var n = ci*10 + i + 1;
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "cell";
+      b.dataset.n = n;
+      if(n === todayNo) b.dataset.today = "1";
+      b.setAttribute("aria-label", "第" + pad(n) + "則 " + ch.rules[i][0] + " へ移動");
+      b.title = pad(n) + "　" + ch.rules[i][0];
+      boardFrag.appendChild(b);
+    }
+  });
+  board.appendChild(boardFrag);
+
+  board.addEventListener("click", function(e){
+    var cell = e.target.closest(".cell");
+    if(!cell) return;
+    jumpTo(Number(cell.dataset.n));
+  });
+
+  /* ── 章目次 ── */
+  var toc = document.getElementById("toc");
+  CHAPTERS.forEach(function(ch, ci){
+    var a = document.createElement("a");
+    a.href = "#ch" + (ci+1);
+    a.innerHTML = "<b>" + ch.kanji + "</b>";
+    a.appendChild(document.createTextNode(ch.name));
+    toc.appendChild(a);
+  });
+
+  /* ── 章と法則 ── */
+  var wrap = document.getElementById("chapters");
+  var frag = document.createDocumentFragment();
+  CHAPTERS.forEach(function(ch, ci){
+    var sec = document.createElement("section");
+    sec.className = "chapter";
+    sec.id = "ch" + (ci+1);
+
+    var head = document.createElement("div");
+    head.className = "chapter-head";
+    head.innerHTML =
+      '<span class="chapter-kanji">' + ch.kanji + '</span>' +
+      '<h2 class="chapter-name">' + ch.name + '<small>' + ch.sub + '　／　第' + pad(ci*10+1) + '則 — 第' + pad(ci*10+10) + '則</small></h2>' +
+      '<span class="chapter-count" data-ch="' + ci + '"><b>0</b> / 10</span>';
+    sec.appendChild(head);
+
+    ch.rules.forEach(function(r, ri){
+      var n = ci*10 + ri + 1;
+      var art = document.createElement("article");
+      art.className = "rule";
+      art.id = "r" + n;
+      if(done[n]) art.dataset.done = "1";
+      art.innerHTML =
+        '<button class="tick" type="button" role="checkbox" aria-checked="' + (done[n] ? "true" : "false") +
+          '" aria-label="第' + pad(n) + '則を実行済みにする" data-n="' + n + '">' +
+          '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.4 4.7 9 10 3"/></svg>' +
+        '</button>' +
+        '<span class="rule-no">' + pad(n) + '</span>' +
+        '<div><h3>' + r[0] + '</h3><p>' + r[1] + '</p></div>';
+      sec.appendChild(art);
+    });
+
+    frag.appendChild(sec);
+  });
+  wrap.appendChild(frag);
+
+  wrap.addEventListener("click", function(e){
+    var tick = e.target.closest(".tick");
+    if(!tick) return;
+    toggle(Number(tick.dataset.n));
+  });
+
+  /* ── 状態 ── */
+  var tallyDone = document.getElementById("tallyDone");
+  var meterFill = document.getElementById("meterFill");
+
+  function toggle(n){
+    if(done[n]) delete done[n]; else done[n] = 1;
+    save(done);
+    paint(n);
+    refresh();
+  }
+
+  function paint(n){
+    var art = document.getElementById("r" + n);
+    var cell = board.querySelector('.cell[data-n="' + n + '"]');
+    var on = !!done[n];
+    if(art){
+      if(on) art.dataset.done = "1"; else delete art.dataset.done;
+      art.querySelector(".tick").setAttribute("aria-checked", on ? "true" : "false");
+    }
+    if(cell){
+      if(on) cell.dataset.done = "1"; else delete cell.dataset.done;
+    }
+  }
+
+  function refresh(){
+    var total = 0;
+    var per = [0,0,0,0,0,0,0,0,0,0];
+    flat.forEach(function(r){
+      if(done[r.n]){ total++; per[r.ch]++; }
+    });
+    tallyDone.textContent = total;
+    meterFill.style.width = total + "%";
+    document.querySelectorAll(".chapter-count").forEach(function(el){
+      el.querySelector("b").textContent = per[Number(el.dataset.ch)];
+    });
+  }
+
+  function jumpTo(n){
+    var art = document.getElementById("r" + n);
+    if(!art) return;
+    art.scrollIntoView({ block: "center", behavior: "smooth" });
+    art.classList.remove("flash");
+    void art.offsetWidth;
+    art.classList.add("flash");
+    var tick = art.querySelector(".tick");
+    if(tick) tick.focus({ preventScroll: true });
+  }
+
+  /* ── 今日の一法則 ── */
+  var t = flat[todayNo - 1];
+  document.getElementById("todayNo").textContent = "第" + pad(t.n) + "則　／　" + CHAPTERS[t.ch].kanji + "章 " + CHAPTERS[t.ch].name;
+  var todayH = document.getElementById("today-h");
+  todayH.textContent = t.title;
+  todayH.style.cursor = "pointer";
+  todayH.addEventListener("click", function(){ jumpTo(t.n); });
+  document.getElementById("todayAct").textContent = t.act;
+
+  /* ── 記録の消去 ── */
+  document.getElementById("resetBtn").addEventListener("click", function(){
+    if(!window.confirm("実行の記録をすべて消します。よろしいですか。")) return;
+    var keys = Object.keys(done);
+    done = {};
+    save(done);
+    keys.forEach(function(k){ paint(Number(k)); });
+    refresh();
+  });
+
+  flat.forEach(function(r){ if(done[r.n]) paint(r.n); });
+  refresh();
+})();
+</script>
+</body>
+</html>
