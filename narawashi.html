@@ -103,6 +103,10 @@ section.pane{min-width:0}
 .moods button{width:36px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--ground);font-weight:700;font-variant-numeric:tabular-nums}
 .moods button[aria-pressed="true"]{background:var(--h3);border-color:var(--h3);color:var(--surface)}
 .moods button:disabled{opacity:.5;cursor:default}
+.focrow.done{border-color:var(--h0)} .focrow .ok{color:var(--h0)}
+.tg{display:inline-block;font-size:10.5px;font-weight:700;padding:0 6px;border-radius:5px;margin-left:6px;vertical-align:2px;border:1px solid var(--c);color:var(--c)}
+.tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tags span{font-size:12px;color:var(--muted);font-weight:600;margin-right:2px}
 .ytsum{margin-top:8px;font-size:13px;color:var(--muted)}
 /* ---- 予定表 ---- */
 .seg{display:inline-flex;flex-wrap:wrap;max-width:100%;gap:2px;background:var(--sunk);border-radius:10px;padding:3px;margin-bottom:10px}
@@ -222,6 +226,7 @@ details.donebox[open] summary::before{content:"▾ "}
 .hint{font-size:12px;color:var(--muted);margin-top:6px}
 
 /* ---- 分析 ---- */
+.radar + .radar{margin-top:10px}
 .radar{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px 12px}
 .rhead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .rhead b{font-size:15px} .rhead span{font-size:12px;color:var(--muted)}
@@ -334,6 +339,14 @@ nav.tabs .badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;he
         <button class="iconbtn" id="ytInc" aria-label="15分増やす">＋</button>
         <span class="hm num" id="ytHm"></span>
       </div>
+      <div class="ytrow focrow" id="focRow">
+        <label for="focMin" title="目標のための作業時間">集中時間<span class="ok">記録済み</span></label>
+        <button class="iconbtn" id="focDec" aria-label="15分減らす">−</button>
+        <input type="number" id="focMin" inputmode="numeric" min="0" max="1440" step="1">
+        <span class="unit">分</span>
+        <button class="iconbtn" id="focInc" aria-label="15分増やす">＋</button>
+        <span class="hm num" id="focHm"></span>
+      </div>
       <div class="moodrow" id="moodRow"><span>気分</span><span class="mtx" id="moodTx"></span>
         <div class="moods" id="moods" role="group" aria-label="気分（1 とても悪い 〜 5 とても良い）"><button data-v="1" aria-label="1 とても悪い">1</button><button data-v="2" aria-label="2 悪い">2</button><button data-v="3" aria-label="3 ふつう">3</button><button data-v="4" aria-label="4 良い">4</button><button data-v="5" aria-label="5 とても良い">5</button></div>
       </div>
@@ -376,6 +389,7 @@ nav.tabs .badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;he
           <input type="text" id="qTitle" maxlength="80" aria-label="タスク名">
           <button class="primary" type="submit">追加</button>
         </div>
+        <div class="tags" id="qTags"><span>印</span><button type="button" class="pill" data-g="goal">目標に関係あり</button><button type="button" class="pill" data-g="imp">重要</button></div>
         <div class="opts" id="qOpts">
           <span>期限</span>
           <button type="button" class="pill" data-q="none">なし</button>
@@ -389,6 +403,7 @@ nav.tabs .badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;he
     <section class="pane" id="ana" aria-label="分析" hidden>
       <div class="calhead"><h2>分析</h2></div>
       <div class="radar" id="radar"></div>
+      <div class="radar" id="radar2" style="margin-top:10px"></div>
       <div class="sub" style="margin-top:22px">直近7日の内訳</div>
       <div class="evals" id="evals"></div>
       <div class="sub" style="margin-top:22px">グラフと比較の期間</div>
@@ -399,7 +414,7 @@ nav.tabs .badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;he
         <div class="tip" id="tip" hidden></div>
       </div>
       <div class="sub" style="margin-top:22px">これをやった日の結果</div>
-      <div class="seg" id="outSeg"><button data-o="add">問題意識</button><button data-o="done">遂行力</button><button data-o="rate">習慣達成率</button><button data-o="mood">気分</button><button data-o="yt">YouTube</button></div>
+      <div class="seg" id="outSeg"><button data-o="add">問題意識</button><button data-o="done">遂行力</button><button data-o="rate">習慣達成率</button><button data-o="mood">気分</button><button data-o="focus">集中時間</button><button data-o="yt">YouTube</button></div>
       <div id="insight"></div>
       <div class="cor" id="cor"></div>
       <p class="hint" id="anaHint"></p>
@@ -545,6 +560,7 @@ function renderRec(){
   if(document.activeElement!==nb||nb.dataset.k!==k){nb.value=(month(k).notes||{})[k]||"";nb.dataset.k=k}
   renderYt();
   renderMood();
+  renderFocus();
 }
 
 /* ---------- YouTube 視聴時間（分・日ごと） ---------- */
@@ -577,6 +593,28 @@ function stepYt(d){
 }
 $("ytDec").onclick=function(){stepYt(-15)};
 $("ytInc").onclick=function(){stepYt(15)};
+/* ---------- 集中時間（分・日ごと） ---------- */
+function renderFocus(){
+  var k=V.day,fut=k>todayKey(),inp=$("focMin"),v=(month(k).focus||{})[k];v=typeof v==="number"?v:null;
+  if(document.activeElement!==inp||inp.dataset.k!==k){inp.value=v===null?"":v;inp.dataset.k=k}
+  inp.disabled=$("focDec").disabled=$("focInc").disabled=fut;
+  $("focHm").textContent=v?hm(v):"";
+  $("focRow").classList.toggle("done",v!==null);
+}
+var focT;
+function setFocus(k,v){
+  var m=k.slice(0,7),L=S.logs[m]=S.logs[m]||{done:{},notes:{}};L.focus=L.focus||{};
+  if(v===null)delete L.focus[k];else L.focus[k]=v;
+  dirty[m]=true;render();
+  clearTimeout(focT);focT=setTimeout(function(){writeMonth(m)},500);
+}
+$("focMin").addEventListener("input",function(){
+  var s=this.value.trim();if(s===""){setFocus(V.day,null);return}
+  var n=Math.max(0,Math.min(1440,Math.round(+s)));if(isNaN(n))return;setFocus(V.day,n);
+});
+function stepFocus(d){var k=V.day,c=(month(k).focus||{})[k],n=Math.max(0,Math.min(1440,(typeof c==="number"?c:0)+d));$("focMin").value=n;setFocus(k,n)}
+$("focDec").onclick=function(){stepFocus(-15)};
+$("focInc").onclick=function(){stepFocus(15)};
 function rowHtml(h,k,future,off){
   var done=isDone(k,h.id),s=streak(h);
   var meta=future?"予定":(s>1?"連続"+s+"回":"");
@@ -617,7 +655,7 @@ function taskRow(t){
   var dl=t.done?{t:t.doneAt?"完了 "+(parse(t.doneAt).getMonth()+1)+"/"+parse(t.doneAt).getDate():"完了",c:""}:dueLabel(t.due);
   return '<div class="trow'+(t.done?" done":"")+'" data-t="'+t.id+'">'+
     '<button class="chk" data-act="tog" aria-pressed="'+!!t.done+'" aria-label="'+esc(t.title)+'を'+(t.done?"未完了に戻す":"完了にする")+'">'+CHECK+"</button>"+
-    '<button class="body" data-act="edit"><b>'+esc(t.title)+"</b>"+(dl.t?'<span class="due num '+dl.c+'">'+dl.t+"</span>":"")+"</button></div>";
+    '<button class="body" data-act="edit"><b>'+esc(t.title)+(t.goal?'<span class="tg" style="--c:var(--h2)">目標</span>':"")+(t.imp?'<span class="tg" style="--c:var(--h6)">重要</span>':"")+"</b>"+(dl.t?'<span class="due num '+dl.c+'">'+dl.t+"</span>":"")+"</button></div>";
 }
 function byDue(a,b){return String(a.due).localeCompare(String(b.due))||(a.created||0)-(b.created||0)}
 function openTasks(){return taskList().filter(function(t){return !t.done})}
@@ -660,7 +698,10 @@ function onTaskClick(e){
 $("taskList").addEventListener("click",onTaskClick);
 $("recTasks").addEventListener("click",onTaskClick);
 
-var qDue="";
+var qDue="",qTag={goal:false,imp:false};
+function paintTags(){[].forEach.call($("qTags").querySelectorAll(".pill"),function(b){b.setAttribute("aria-pressed",!!qTag[b.dataset.g])})}
+$("qTags").addEventListener("click",function(e){var b=e.target.closest(".pill");if(!b)return;qTag[b.dataset.g]=!qTag[b.dataset.g];paintTags()});
+paintTags();
 function paintQ(){
   var t=todayKey();
   [].forEach.call($("qOpts").querySelectorAll(".pill"),function(b){
@@ -675,25 +716,29 @@ $("qadd").addEventListener("submit",function(e){
   e.preventDefault();
   var inp=$("qTitle"),n=inp.value.trim();if(!n){inp.focus();return}
   var id="t"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  S.tasks[id]={title:n,due:qDue,done:false,doneAt:null,created:Date.now()};
+  S.tasks[id]={title:n,due:qDue,done:false,doneAt:null,created:Date.now(),goal:qTag.goal,imp:qTag.imp};
+  qTag={goal:false,imp:false};paintTags();
   writeTask(id);inp.value="";render();inp.focus();
 });
 paintQ();
 
 function openTaskSheet(id){
   var x=S.tasks[id];if(!x)return;
-  var root=$("sheetRoot"),due=x.due||"";
+  var root=$("sheetRoot"),due=x.due||"",tg={goal:!!x.goal,imp:!!x.imp};
   root.innerHTML='<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">'+
     '<h3 id="shT">タスクを編集</h3>'+
     '<div class="field"><label for="tName">タスク名</label><input type="text" id="tName" maxlength="80" value="'+esc(x.title)+'"></div>'+
     '<div class="field"><span class="lb">期限</span><div class="presets" id="tPre"><button class="pill" data-q="none">なし</button><button class="pill" data-q="0">今日</button><button class="pill" data-q="1">明日</button><input type="date" id="tDate" aria-label="期限の日付"></div></div>'+
+    '<div class="field"><span class="lb">印</span><div class="presets" id="tTags"><button class="pill" data-g="goal">目標に関係あり</button><button class="pill" data-g="imp">重要</button></div></div>'+
     '<div class="sheetact"><button class="danger" id="tDel">削除</button><button class="pill" id="tCancel" style="height:46px">閉じる</button><button class="primary" id="tSave">保存</button></div>'+
     "</div></div>";
   function paint(){
     var t=todayKey();
     [].forEach.call(root.querySelectorAll("#tPre .pill"),function(b){b.setAttribute("aria-pressed",(b.dataset.q==="none"?"":addDays(t,+b.dataset.q))===due)});
     $("tDate").value=due;
+    [].forEach.call(root.querySelectorAll("#tTags .pill"),function(b){b.setAttribute("aria-pressed",!!tg[b.dataset.g])});
   }
+  $("tTags").onclick=function(e){var b=e.target.closest(".pill");if(!b)return;tg[b.dataset.g]=!tg[b.dataset.g];paint()};
   paint();
   $("tPre").onclick=function(e){var b=e.target.closest(".pill");if(!b)return;due=b.dataset.q==="none"?"":addDays(todayKey(),+b.dataset.q);paint()};
   $("tDate").onchange=function(){due=this.value||"";paint()};
@@ -702,7 +747,10 @@ function openTaskSheet(id){
   $("scrim").onclick=function(e){if(e.target.id==="scrim")close()};
   function save(){
     var n=$("tName").value.trim();if(!n){$("tName").focus();return}
-    S.tasks[id]=Object.assign({},S.tasks[id],{title:n,due:due});
+    var old=S.tasks[id],post=(old.post||[]).slice();
+    /* 期限を後ろにずらした・外したら「先延ばし」として日付を残す */
+    if(!old.done&&old.due&&(!due||due>old.due))post.push(todayKey());
+    S.tasks[id]=Object.assign({},old,{title:n,due:due,goal:tg.goal,imp:tg.imp,post:post});
     writeTask(id);close();render();
   }
   $("tSave").onclick=save;
@@ -944,6 +992,54 @@ $("moods").addEventListener("click",function(e){
   writeMonth(m);render();
 });
 
+/* ---------- 目的達成に近づく7つの指標（直近7日・0〜100点） ---------- */
+function focusOn(k){var v=(month(k).focus||{})[k];return typeof v==="number"?v:null}
+function sevenScores(days){
+  var t=todayKey(),set={};days.forEach(function(k){set[k]=1});
+  function cap(v){return v===null?null:Math.max(0,Math.min(100,Math.round(v)))}
+  var all=taskList();
+  /* ① 立て直し力：休んだ次の予定日に再開できたか */
+  var miss=0,rec=0,pl=0;
+  habitList().forEach(function(h){
+    days.forEach(function(k){
+      if(k>=t||!planned(h,k))return;pl++;
+      if(isDone(k,h.id))return;
+      var n=addDays(k,1),g=0;while(g++<14&&!planned(h,n))n=addDays(n,1);
+      if(g>14||n>t)return;
+      if(n===t&&!isDone(n,h.id))return;
+      miss++;if(isDone(n,h.id))rec++;
+    });
+  });
+  var s1=miss?rec/miss*100:(pl?100:null),b1=miss?"休んだ "+miss+"回のうち次の予定日に再開 "+rec+"回":(pl?"休んだ日なし":"習慣の予定なし");
+  /* ② 振り返り率：メモを書いた日 */
+  var nd=days.filter(function(k){return (month(k).notes||{})[k]}).length;
+  /* ③ 目的への集中度：完了したうち「目標」の印つき */
+  var done=all.filter(function(x){return x.done&&set[x.doneAt]}),goal=done.filter(function(x){return x.goal}).length;
+  /* ④ 優先順位の実行力：「重要」の印つきを期限内に完了 */
+  var imp=all.filter(function(x){return x.imp&&x.due&&set[x.due]&&(x.due<t||x.done)}),impOk=imp.filter(function(x){return x.done&&x.doneAt<=x.due}).length;
+  /* ⑤ 先延ばしの少なさ：期限をずらした・期限切れのまま */
+  var T=all.filter(function(x){return (x.due&&set[x.due]&&x.due<=t)||(x.post||[]).some(function(k){return set[k]})});
+  var post=sum(all.map(function(x){return (x.post||[]).filter(function(k){return set[k]}).length}));
+  var bad=T.filter(function(x){return (x.post||[]).some(function(k){return set[k]})||(!x.done&&x.due&&x.due<t)}).length;
+  var overs=all.filter(function(x){return !x.done&&x.due&&x.due<t}).map(function(x){return Math.round((parse(t)-parse(x.due))/864e5)});
+  /* ⑥ 計画の見積もり精度：その日が期限のタスクを、その日のうちに全部終えた日 */
+  var dd=0,dok=0;
+  days.forEach(function(k){
+    if(k>=t)return;var ts=all.filter(function(x){return x.due===k});if(!ts.length)return;
+    dd++;if(ts.every(function(x){return x.done&&x.doneAt<=k}))dok++;
+  });
+  /* ⑦ 集中時間：集中 ÷（集中＋YouTube） */
+  var F=0,Y=0,fn=0;days.forEach(function(k){var f=focusOn(k),y=ytOn(k);if(f!==null){F+=f;fn++}if(y!==null)Y+=y});
+  return [
+    {k:"立て直し力",l:["立て直し力"],col:"h1",v:cap(s1),b:b1},
+    {k:"振り返り率",l:["振り返り率"],col:"h7",v:cap(nd/days.length*100),b:"メモを書いた日 "+nd+" / "+days.length+"日"},
+    {k:"目的への集中度",l:["目的への","集中度"],col:"h2",v:cap(done.length?goal/done.length*100:null),b:done.length?"完了 "+done.length+"件のうち「目標」 "+goal+"件":"完了したタスクなし"},
+    {k:"優先順位の実行力",l:["優先順位の","実行力"],col:"h6",v:cap(imp.length?impOk/imp.length*100:null),b:imp.length?"「重要」を期限内に完了 "+impOk+" / "+imp.length+"件":"期限が来た「重要」タスクなし"},
+    {k:"先延ばしの少なさ",l:["先延ばしの","少なさ"],col:"h5",v:cap(T.length?(T.length-bad)/T.length*100:null),b:T.length?"期限をずらした "+post+"回・期限切れの平均超過 "+(overs.length?fmt1(sum(overs)/overs.length):"0")+"日（"+(T.length-bad)+" / "+T.length+"件が期限どおり）":"期限が来たタスクなし"},
+    {k:"計画の見積もり精度",l:["見積もり","精度"],col:"h4",v:cap(dd?dok/dd*100:null),b:dd?"期限のタスクをその日に全部終えた日 "+dok+" / "+dd+"日":"期限つきタスクのある日なし"},
+    {k:"集中時間",l:["集中時間"],col:"h0",v:cap(fn&&F+Y?F/(F+Y)*100:null),b:fn?"集中 "+hm(F)+" ／ YouTube "+hm(Y)+"（集中の割合）":"集中時間が未記録"}
+  ];
+}
 /* ---------- 5つの力の五角形（直近7日・0〜100点） ---------- */
 var EVN=7;
 function fiveScores(days){
@@ -957,12 +1053,12 @@ function fiveScores(days){
     {k:"スケジュール設定力",l:["スケジュール","設定力"],col:"h4",v:cap(q.added?q.withDue/q.added*100:null),b:"期限つきで追加 "+q.withDue+" / "+q.added+"件"}
   ];
 }
-function renderRadar(cur,prev){
-  var W=380,H=300,cx=190,cy=160,R=88,N=5;
+function renderRadar(el,title,cur,prev){
+  var W=380,H=300,cx=190,cy=160,R=88,N=cur.length;
   function pt(i,r){var a=-Math.PI/2+i*2*Math.PI/N;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]}
   function poly(vals){return vals.map(function(v,i){var p=pt(i,(v||0)/100*R);return p[0].toFixed(1)+","+p[1].toFixed(1)}).join(" ")}
-  var s='<svg viewBox="0 0 '+W+" "+H+'" role="img" aria-label="直近7日の5つの力（0〜100点）">';
-  [25,50,75,100].forEach(function(g){s+='<polygon points="'+poly([g,g,g,g,g])+'" fill="none" stroke="var(--line)" stroke-width="1"'+(g<100?' stroke-dasharray="2 3"':"")+"/>"});
+  var s='<svg viewBox="0 0 '+W+" "+H+'" role="img" aria-label="'+title+'（0〜100点）">';
+  [25,50,75,100].forEach(function(g){s+='<polygon points="'+poly(cur.map(function(){return g}))+'" fill="none" stroke="var(--line)" stroke-width="1"'+(g<100?' stroke-dasharray="2 3"':"")+"/>"});
   for(var i=0;i<N;i++){var e=pt(i,R);s+='<line x1="'+cx+'" y1="'+cy+'" x2="'+e[0]+'" y2="'+e[1]+'" stroke="var(--line)" stroke-width="1"/>'}
   s+='<text x="'+(cx+3)+'" y="'+(cy-R/2+11)+'" class="gl">50</text><text x="'+(cx+3)+'" y="'+(cy-R+11)+'" class="gl">100</text>';
   if(prev.some(function(x){return x.v!==null}))s+='<polygon points="'+poly(prev.map(function(x){return x.v}))+'" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>';
@@ -981,7 +1077,7 @@ function renderRadar(cur,prev){
   }).join("");
   var have=cur.filter(function(x){return x.v!==null});
   var tot=have.length?Math.round(sum(have.map(function(x){return x.v}))/have.length):null;
-  $("radar").innerHTML='<div class="rhead"><b>直近7日の評価</b><span class="num">'+shortMd(addDays(todayKey(),-6))+"〜"+shortMd(todayKey())+"</span><em class=\"num\">平均 "+(tot===null?"–":tot)+"点</em></div>"+
+  $(el).innerHTML='<div class="rhead"><b>'+title+'</b><span class="num">'+shortMd(addDays(todayKey(),-6))+"〜"+shortMd(todayKey())+"</span><em class=\"num\">平均 "+(tot===null?"–":tot)+"点</em></div>"+
     '<div class="rbody"><div class="rsvg">'+s+'<div class="lg"><span style="--c:var(--accent)"><i></i>直近7日</span><span class="dash">前の7日</span></div></div><ul class="rlist">'+rows+"</ul></div>";
 }
 /* ---------- 分析：3つの力（スケジュール設定・メンタル・予定どおり） ---------- */
@@ -1053,7 +1149,8 @@ function taskStats(days){
 function renderAna(){
   var t=todayKey(),n=EVN,days=daysBack(t,n),prev=daysBack(addDays(t,-n),n);
   [].forEach.call($("anaSeg").querySelectorAll("button"),function(b){b.setAttribute("aria-pressed",+b.dataset.p===V.per)});
-  renderRadar(fiveScores(days),fiveScores(prev));
+  renderRadar("radar","直近7日の評価",fiveScores(days),fiveScores(prev));
+  renderRadar("radar2","目的達成に近づく7つの指標",sevenScores(days),sevenScores(prev));
   [].forEach.call($("outSeg").querySelectorAll("button"),function(b){b.setAttribute("aria-pressed",b.dataset.o===V.out)});
   var c=taskStats(days),p=taskStats(prev),open=openTasks();
   var over=open.filter(function(x){return x.due&&x.due<t}).length;
@@ -1115,6 +1212,7 @@ var OUT={
   add:{label:"タスク追加",unit:"件",col:"aw",f:function(k){return addedOn(k)},dec:1},
   done:{label:"タスク完了",unit:"件",col:"ex",f:function(k){return doneOnDay(k)},dec:1},
   rate:{label:"ほかの習慣の達成率",unit:"%",col:"accent",f:null,dec:0},
+  focus:{label:"集中時間",unit:"分",col:"h0",f:function(k){return focusOn(k)},dec:0},
   mood:{label:"気分",unit:"",col:"h3",f:function(k){return moodOn(k)},dec:1},
   yt:{label:"YouTube 視聴",unit:"分",col:"yt",f:function(k){return ytOn(k)},dec:0}
 };
