@@ -222,6 +222,30 @@ details.donebox[open] summary::before{content:"▾ "}
 .hint{font-size:12px;color:var(--muted);margin-top:6px}
 
 /* ---- 分析 ---- */
+.radar{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px 12px}
+.rhead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.rhead b{font-size:15px} .rhead span{font-size:12px;color:var(--muted)}
+.rhead em{font-style:normal;margin-left:auto;font-weight:700;font-size:15px}
+.rbody{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center}
+.rsvg{flex:1 1 280px;max-width:380px;margin:0 auto}
+.rsvg svg{display:block;width:100%;height:auto}
+.rsvg svg text{font-family:inherit;fill:var(--ink)}
+.rsvg .rl{font-size:11.5px;font-weight:600}
+.rsvg .rv{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+.rsvg .gl{font-size:9.5px;fill:var(--muted)}
+.rsvg .lg{display:flex;gap:14px;justify-content:center;font-size:12px;color:var(--muted)}
+.rsvg .lg span{display:flex;align-items:center;gap:5px}
+.rsvg .lg i{width:10px;height:10px;border-radius:3px;background:var(--c);opacity:.6}
+.rsvg .lg .dash::before{content:"";width:16px;border-top:1.5px dashed var(--muted)}
+.rlist{flex:1 1 260px;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.rlist li{display:grid;grid-template-columns:auto 1fr auto 3.2em;gap:0 8px;align-items:baseline}
+.rlist i{width:9px;height:9px;border-radius:50%;background:var(--c);align-self:center}
+.rlist b{font-size:13.5px;font-weight:600}
+.rlist em{font-style:normal;font-size:17px;font-weight:700;text-align:right}
+.rlist li > span{font-size:12px;font-weight:600;text-align:right}
+.rlist .up{color:var(--pos)} .rlist .down{color:var(--neg)} .rlist .flat{color:var(--muted)}
+.rlist small{grid-column:2/-1;font-size:11.5px;color:var(--muted)}
+
 .evals{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
 .ev{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .ev .hd{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.06em}
@@ -364,8 +388,11 @@ nav.tabs .badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;he
     </section>
     <section class="pane" id="ana" aria-label="分析" hidden>
       <div class="calhead"><h2>分析</h2></div>
-      <div class="seg" id="anaSeg"><button data-p="7">7日</button><button data-p="30">30日</button><button data-p="90">90日</button></div>
+      <div class="radar" id="radar"></div>
+      <div class="sub" style="margin-top:22px">直近7日の内訳</div>
       <div class="evals" id="evals"></div>
+      <div class="sub" style="margin-top:22px">グラフと比較の期間</div>
+      <div class="seg" id="anaSeg"><button data-p="7">7日</button><button data-p="30">30日</button><button data-p="90">90日</button></div>
       <div class="chartbox" id="chartbox">
         <div class="lg"><span style="--c:var(--aw)"><i></i>問題意識（追加）</span><span style="--c:var(--ex)"><i></i>タスク遂行力（完了）</span></div>
         <div id="chart"></div>
@@ -917,6 +944,46 @@ $("moods").addEventListener("click",function(e){
   writeMonth(m);render();
 });
 
+/* ---------- 5つの力の五角形（直近7日・0〜100点） ---------- */
+var EVN=7;
+function fiveScores(days){
+  var c=taskStats(days),q=planStats(days);
+  function cap(v){return v===null?null:Math.max(0,Math.min(100,Math.round(v)))}
+  return [
+    {k:"問題意識",l:["問題意識"],col:"aw",v:cap(c.addDays/EVN*100),b:"タスクを追加した日 "+c.addDays+" / "+EVN+"日"},
+    {k:"タスク遂行力",l:["タスク","遂行力"],col:"ex",v:cap(c.added?c.done/c.added*100:(c.done?100:null)),b:"完了 "+c.done+"件 ÷ 追加 "+c.added+"件（上限100）"},
+    {k:"スケジュール通りの遂行力",l:["スケジュール","通りの遂行力"],col:"h0",v:cap(q.P+q.due?(q.D+q.onTime)/(q.P+q.due)*100:null),b:"予定・期限どおり "+(q.D+q.onTime)+" / "+(q.P+q.due)+"件"},
+    {k:"メンタルコントロール力",l:["メンタル","コントロール力"],col:"h3",v:cap(q.mAvg===null?null:(q.mAvg-1)/4*100),b:q.mAvg===null?"気分が未記録":"気分の平均 "+fmt1(q.mAvg)+" / 5（"+q.moodN+"日分）"},
+    {k:"スケジュール設定力",l:["スケジュール","設定力"],col:"h4",v:cap(q.added?q.withDue/q.added*100:null),b:"期限つきで追加 "+q.withDue+" / "+q.added+"件"}
+  ];
+}
+function renderRadar(cur,prev){
+  var W=380,H=300,cx=190,cy=160,R=88,N=5;
+  function pt(i,r){var a=-Math.PI/2+i*2*Math.PI/N;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]}
+  function poly(vals){return vals.map(function(v,i){var p=pt(i,(v||0)/100*R);return p[0].toFixed(1)+","+p[1].toFixed(1)}).join(" ")}
+  var s='<svg viewBox="0 0 '+W+" "+H+'" role="img" aria-label="直近7日の5つの力（0〜100点）">';
+  [25,50,75,100].forEach(function(g){s+='<polygon points="'+poly([g,g,g,g,g])+'" fill="none" stroke="var(--line)" stroke-width="1"'+(g<100?' stroke-dasharray="2 3"':"")+"/>"});
+  for(var i=0;i<N;i++){var e=pt(i,R);s+='<line x1="'+cx+'" y1="'+cy+'" x2="'+e[0]+'" y2="'+e[1]+'" stroke="var(--line)" stroke-width="1"/>'}
+  s+='<text x="'+(cx+3)+'" y="'+(cy-R/2+11)+'" class="gl">50</text><text x="'+(cx+3)+'" y="'+(cy-R+11)+'" class="gl">100</text>';
+  if(prev.some(function(x){return x.v!==null}))s+='<polygon points="'+poly(prev.map(function(x){return x.v}))+'" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>';
+  s+='<polygon points="'+poly(cur.map(function(x){return x.v}))+'" fill="var(--accent)" fill-opacity=".18" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>';
+  cur.forEach(function(x,i){if(x.v===null)return;var p=pt(i,x.v/100*R);s+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>'});
+  cur.forEach(function(x,i){
+    var p=pt(i,R+16),dx=p[0]-cx,anc=Math.abs(dx)<8?"middle":dx>0?"start":"end";
+    var y0=i===0?p[1]-34:(p[1]>cy+20?p[1]+2:p[1]-8);
+    s+='<text x="'+p[0]+'" y="'+y0+'" text-anchor="'+anc+'" class="rl">'+x.l.map(function(t,j){return '<tspan x="'+p[0]+'" dy="'+(j?13:0)+'">'+t+"</tspan>"}).join("")+
+      '<tspan x="'+p[0]+'" dy="16" class="rv">'+(x.v===null?"–":x.v)+"</tspan></text>";
+  });
+  s+="</svg>";
+  var rows=cur.map(function(x,i){
+    var pv=prev[i].v,d=(x.v===null||pv===null)?"":'<span class="num '+(x.v>pv?"up":x.v<pv?"down":"flat")+'">'+(x.v>pv?"+":x.v<pv?"−":"±")+Math.abs(x.v-pv)+"</span>";
+    return '<li style="--c:var(--'+x.col+')"><i></i><b>'+x.k+'</b><em class="num">'+(x.v===null?"–":x.v)+"</em>"+d+"<small>"+x.b+"</small></li>";
+  }).join("");
+  var have=cur.filter(function(x){return x.v!==null});
+  var tot=have.length?Math.round(sum(have.map(function(x){return x.v}))/have.length):null;
+  $("radar").innerHTML='<div class="rhead"><b>直近7日の評価</b><span class="num">'+shortMd(addDays(todayKey(),-6))+"〜"+shortMd(todayKey())+"</span><em class=\"num\">平均 "+(tot===null?"–":tot)+"点</em></div>"+
+    '<div class="rbody"><div class="rsvg">'+s+'<div class="lg"><span style="--c:var(--accent)"><i></i>直近7日</span><span class="dash">前の7日</span></div></div><ul class="rlist">'+rows+"</ul></div>";
+}
 /* ---------- 分析：3つの力（スケジュール設定・メンタル・予定どおり） ---------- */
 function planStats(days){
   var t=todayKey(),set={};days.forEach(function(k){set[k]=1});
@@ -941,8 +1008,8 @@ function planStats(days){
 }
 function ratio(a,b){return b?Math.round(a/b*100):null}
 function cmpPt(cur,prev){
-  if(cur===null||prev===null)return '<div class="cmp flat">前の'+V.per+"日と比べる記録がありません</div>";
-  var d=cur-prev;return '<div class="cmp num '+(d>0?"up":d<0?"down":"flat")+'">前の'+V.per+"日より "+(d>0?"+":d<0?"−":"±")+Math.abs(d)+"ポイント（前 "+prev+"%）</div>";
+  if(cur===null||prev===null)return '<div class="cmp flat">前の'+EVN+"日と比べる記録がありません</div>";
+  var d=cur-prev;return '<div class="cmp num '+(d>0?"up":d<0?"down":"flat")+'">前の'+EVN+"日より "+(d>0?"+":d<0?"−":"±")+Math.abs(d)+"ポイント（前 "+prev+"%）</div>";
 }
 function sm(a,b){return '<small style="color:var(--muted);font-weight:500">（'+a+"/"+b+"）</small>"}
 function threeCards(days,prev){
@@ -953,14 +1020,14 @@ function threeCards(days,prev){
   return ''+
   '<div class="ev" style="--c:var(--h4)"><div class="hd"><i></i>スケジュール設定力<span>期限つきで追加した割合</span></div>'+
     big(setR,"%")+cmpPt(setR,setP)+
-    '<dl class="num"><dt>期限つきで追加</dt><dd>'+c.withDue+"件"+sm(c.withDue,c.added)+'</dd><dt>予定表に予定を入れた日</dt><dd>'+c.evDays+" / "+V.per+"日</dd></dl></div>"+
+    '<dl class="num"><dt>期限つきで追加</dt><dd>'+c.withDue+"件"+sm(c.withDue,c.added)+'</dd><dt>予定表に予定を入れた日</dt><dd>'+c.evDays+" / "+EVN+"日</dd></dl></div>"+
   '<div class="ev" style="--c:var(--h0)"><div class="hd"><i></i>スケジュール通りの遂行力<span>予定・期限どおりの割合</span></div>'+
     big(adh,"%")+cmpPt(adh,adhP)+
     '<dl class="num"><dt>習慣を予定の曜日に実行</dt><dd>'+(c.P?ratio(c.D,c.P)+"%":"–")+sm(c.D,c.P)+'</dd><dt>タスクを期限内に完了</dt><dd>'+(c.due?ratio(c.onTime,c.due)+"%":"–")+sm(c.onTime,c.due)+'</dd><dt>予定外の日にも実行</dt><dd>'+c.X+"回</dd></dl></div>"+
   '<div class="ev" style="--c:var(--h3)"><div class="hd"><i></i>メンタルコントロール力<span>気分の記録から</span></div>'+
     (c.mAvg===null?'<div class="big num">–<small>気分が未記録</small></div><div class="cmp flat">記録画面の「気分」を1〜5で付けると出ます</div>':
-    '<div class="big num">'+fmt1(c.mAvg)+'<small>/ 5（'+MOOD[Math.round(c.mAvg)]+'）</small></div>'+(p.mAvg===null?'<div class="cmp flat">前の'+V.per+'日と比べる記録がありません</div>':(function(d){d=Math.round(d*10)/10;return '<div class="cmp num '+(d>0?"up":d<0?"down":"flat")+'">前の'+V.per+"日より "+(d>0?"+":d<0?"−":"±")+Math.abs(d).toFixed(1)+"（前 "+fmt1(p.mAvg)+"）</div>"})(c.mAvg-p.mAvg)))+
-    '<dl class="num"><dt>気分を記録した日</dt><dd>'+c.moodN+" / "+V.per+'日</dd><dt>落ち込んだ日（1〜2）</dt><dd>'+c.low+'日</dd><dt>気分の波（ばらつき）</dt><dd>'+(c.mSd===null?"–":fmt1(c.mSd))+'</dd><dt>YouTube 60分未満の日</dt><dd>'+(c.ytN?ratio(c.ytIn,c.ytN)+"%":"–")+sm(c.ytIn,c.ytN)+"</dd></dl></div>";
+    '<div class="big num">'+fmt1(c.mAvg)+'<small>/ 5（'+MOOD[Math.round(c.mAvg)]+'）</small></div>'+(p.mAvg===null?'<div class="cmp flat">前の'+EVN+'日と比べる記録がありません</div>':(function(d){d=Math.round(d*10)/10;return '<div class="cmp num '+(d>0?"up":d<0?"down":"flat")+'">前の'+EVN+"日より "+(d>0?"+":d<0?"−":"±")+Math.abs(d).toFixed(1)+"（前 "+fmt1(p.mAvg)+"）</div>"})(c.mAvg-p.mAvg)))+
+    '<dl class="num"><dt>気分を記録した日</dt><dd>'+c.moodN+" / "+EVN+'日</dd><dt>落ち込んだ日（1〜2）</dt><dd>'+c.low+'日</dd><dt>気分の波（ばらつき）</dt><dd>'+(c.mSd===null?"–":fmt1(c.mSd))+'</dd><dt>YouTube 60分未満の日</dt><dd>'+(c.ytN?ratio(c.ytIn,c.ytN)+"%":"–")+sm(c.ytIn,c.ytN)+"</dd></dl></div>";
 }
 V.per=7;V.out="done";
 function addedOn(k){return taskList().filter(function(x){return x.created&&key(new Date(x.created))===k}).length}
@@ -970,7 +1037,7 @@ function sum(a){return a.reduce(function(s,x){return s+x},0)}
 function fmt1(x){return (Math.round(x*10)/10).toFixed(1)}
 function cmpHtml(cur,prev,unit){
   var d=cur-prev;
-  return '<div class="cmp num '+(d>0?"up":d<0?"down":"flat")+'">前の'+V.per+"日より "+(d>0?"+":d<0?"−":"±")+Math.abs(d)+unit+"（前 "+prev+unit+"）</div>";
+  return '<div class="cmp num '+(d>0?"up":d<0?"down":"flat")+'">前の'+EVN+"日より "+(d>0?"+":d<0?"−":"±")+Math.abs(d)+unit+"（前 "+prev+unit+"）</div>";
 }
 function taskStats(days){
   var set={};days.forEach(function(k){set[k]=1});
@@ -984,8 +1051,9 @@ function taskStats(days){
   return {added:added.length,done:done.length,addedDone:addedDone.length,withDue:withDue.length,inTime:inTime.length,addDays:addDays_};
 }
 function renderAna(){
-  var t=todayKey(),n=V.per,days=daysBack(t,n),prev=daysBack(addDays(t,-n),n);
-  [].forEach.call($("anaSeg").querySelectorAll("button"),function(b){b.setAttribute("aria-pressed",+b.dataset.p===n)});
+  var t=todayKey(),n=EVN,days=daysBack(t,n),prev=daysBack(addDays(t,-n),n);
+  [].forEach.call($("anaSeg").querySelectorAll("button"),function(b){b.setAttribute("aria-pressed",+b.dataset.p===V.per)});
+  renderRadar(fiveScores(days),fiveScores(prev));
   [].forEach.call($("outSeg").querySelectorAll("button"),function(b){b.setAttribute("aria-pressed",b.dataset.o===V.out)});
   var c=taskStats(days),p=taskStats(prev),open=openTasks();
   var over=open.filter(function(x){return x.due&&x.due<t}).length;
@@ -998,7 +1066,7 @@ function renderAna(){
       '<div class="big num">'+c.done+'<small>件 / '+n+'日</small></div>'+cmpHtml(c.done,p.done,"件")+
       '<dl class="num"><dt>この期間に追加した分の完了率</dt><dd>'+pct(c.addedDone,c.added)+'<small style="color:var(--muted);font-weight:500">（'+c.addedDone+"/"+c.added+'）</small></dd>'+
       '<dt>いま期限切れ</dt><dd'+(over?' style="color:var(--today)"':"")+'>'+over+"件</dd></dl></div>"+threeCards(days,prev);
-  renderAnaChart(days);
+  renderAnaChart(daysBack(t,V.per));
   renderCorr();
 }
 
@@ -1089,7 +1157,7 @@ function renderCorr(){
   }).join(""):'<div class="empty">比べられる記録がまだありません。習慣やタスクを記録すると、ここに結果が出ます。</div>';
   var best=rows.filter(function(r){return !r.weak&&r.diff!==null&&Math.abs(r.diff)>=(o.dec?0.3:5)})[0];
   $("insight").innerHTML=best?'<div class="insight">'+esc(best.f.short)+(best.f.id.charAt(0)==="h"&&S.habits[best.f.id]?"をやった日":"")+"は、"+o.label+"が平均 <b class=\"num\">"+val(best.ma)+"</b>。やらなかった日は <b class=\"num\">"+val(best.mb)+"</b> です（"+best.na+"日 と "+best.nb+"日 の比較）。</div>":"";
-  $("anaHint").textContent="直近"+V.per+"日（今日を除く）で比べています。同じ日に起きたことの比較で、原因とは限りません。削除したタスクは数えていません。上の評価のうち、習慣とYouTubeは今日を除いて数えています。";
+  $("anaHint").textContent="直近"+V.per+"日（今日を除く）で比べています。同じ日に起きたことの比較で、原因とは限りません。削除したタスクは数えていません。五角形と内訳は期間の切り替えに関係なく直近7日（今日を含む）で評価し、習慣とYouTubeは今日を除いて数えています。";
 }
 $("anaSeg").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;V.per=+b.dataset.p;renderAna()});
 $("outSeg").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;V.out=b.dataset.o;renderCorr();[].forEach.call($("outSeg").querySelectorAll("button"),function(x){x.setAttribute("aria-pressed",x.dataset.o===V.out)})});
