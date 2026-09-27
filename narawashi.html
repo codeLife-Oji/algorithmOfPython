@@ -95,9 +95,17 @@ section.pane{min-width:0}
 .ytrow .ok{display:none;margin-left:8px;color:var(--yt);letter-spacing:0}
 .ytrow.done{border-color:var(--yt)}
 .ytrow.done .ok{display:inline}
+.moodrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px 8px 12px}
+.moodrow > span:first-child{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.06em}
+.moodrow .mtx{font-size:12px;color:var(--muted);margin-right:auto;margin-left:6px}
+.moodrow.done{border-color:var(--h3)} .moodrow.done .mtx{color:var(--h3);font-weight:600}
+.moods{display:flex;gap:4px}
+.moods button{width:36px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--ground);font-weight:700;font-variant-numeric:tabular-nums}
+.moods button[aria-pressed="true"]{background:var(--h3);border-color:var(--h3);color:var(--surface)}
+.moods button:disabled{opacity:.5;cursor:default}
 .ytsum{margin-top:8px;font-size:13px;color:var(--muted)}
 /* ---- 予定表 ---- */
-.seg{display:inline-flex;gap:2px;background:var(--sunk);border-radius:10px;padding:3px;margin-bottom:10px}
+.seg{display:inline-flex;flex-wrap:wrap;max-width:100%;gap:2px;background:var(--sunk);border-radius:10px;padding:3px;margin-bottom:10px}
 .seg button{height:32px;padding:0 14px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink)}
 .cell .evd{display:flex;gap:3px;justify-content:center;margin-top:auto;margin-bottom:auto}
@@ -218,7 +226,7 @@ details.donebox[open] summary::before{content:"▾ "}
 .ev{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .ev .hd{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.06em}
 .ev .hd i{width:10px;height:10px;border-radius:3px;background:var(--c)}
-.ev .hd span{font-weight:600;letter-spacing:0;margin-left:auto}
+.ev .hd span{font-weight:600;letter-spacing:0;margin-left:auto;text-align:right}
 .ev .big{font-size:30px;font-weight:700;line-height:1.1}
 .ev .big small{font-size:13px;font-weight:600;color:var(--muted);margin-left:4px}
 .ev .cmp{font-size:12px;font-weight:600}
@@ -302,6 +310,9 @@ nav.tabs .badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;he
         <button class="iconbtn" id="ytInc" aria-label="15分増やす">＋</button>
         <span class="hm num" id="ytHm"></span>
       </div>
+      <div class="moodrow" id="moodRow"><span>気分</span><span class="mtx" id="moodTx"></span>
+        <div class="moods" id="moods" role="group" aria-label="気分（1 とても悪い 〜 5 とても良い）"><button data-v="1" aria-label="1 とても悪い">1</button><button data-v="2" aria-label="2 悪い">2</button><button data-v="3" aria-label="3 ふつう">3</button><button data-v="4" aria-label="4 良い">4</button><button data-v="5" aria-label="5 とても良い">5</button></div>
+      </div>
       <div class="daynav">
         <button class="iconbtn" id="prevDay" aria-label="前の日">‹</button>
         <div class="date"><div class="md num" id="dayTitle"></div><div class="rel" id="dayRel"></div></div>
@@ -361,7 +372,7 @@ nav.tabs .badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;he
         <div class="tip" id="tip" hidden></div>
       </div>
       <div class="sub" style="margin-top:22px">これをやった日の結果</div>
-      <div class="seg" id="outSeg"><button data-o="add">問題意識</button><button data-o="done">遂行力</button><button data-o="rate">習慣達成率</button><button data-o="yt">YouTube</button></div>
+      <div class="seg" id="outSeg"><button data-o="add">問題意識</button><button data-o="done">遂行力</button><button data-o="rate">習慣達成率</button><button data-o="mood">気分</button><button data-o="yt">YouTube</button></div>
       <div id="insight"></div>
       <div class="cor" id="cor"></div>
       <p class="hint" id="anaHint"></p>
@@ -506,6 +517,7 @@ function renderRec(){
   /* 日付を切り替えたら、入力中でもその日のメモに差し替える */
   if(document.activeElement!==nb||nb.dataset.k!==k){nb.value=(month(k).notes||{})[k]||"";nb.dataset.k=k}
   renderYt();
+  renderMood();
 }
 
 /* ---------- YouTube 視聴時間（分・日ごと） ---------- */
@@ -889,6 +901,67 @@ function openSheet(id){
 }
 
 /* ---------- 分析：問題意識（タスク追加）とタスク遂行力（タスク完了） ---------- */
+/* ---------- 気分（1〜5・日ごと） ---------- */
+var MOOD=["","とても悪い","悪い","ふつう","良い","とても良い"];
+function moodOn(k){var v=(month(k).mood||{})[k];return typeof v==="number"?v:null}
+function renderMood(){
+  var k=V.day,fut=k>todayKey(),v=moodOn(k);
+  [].forEach.call($("moods").querySelectorAll("button"),function(b){b.setAttribute("aria-pressed",+b.dataset.v===v);b.disabled=fut});
+  $("moodTx").textContent=v?MOOD[v]:"未記録";
+  $("moodRow").classList.toggle("done",v!==null);
+}
+$("moods").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b||b.disabled)return;
+  var k=V.day,m=k.slice(0,7),L=S.logs[m]=S.logs[m]||{done:{},notes:{}};L.mood=L.mood||{};
+  var n=+b.dataset.v;if(L.mood[k]===n)delete L.mood[k];else L.mood[k]=n;
+  writeMonth(m);render();
+});
+
+/* ---------- 分析：3つの力（スケジュール設定・メンタル・予定どおり） ---------- */
+function planStats(days){
+  var t=todayKey(),set={};days.forEach(function(k){set[k]=1});
+  var all=taskList();
+  var added=all.filter(function(x){return x.created&&set[key(new Date(x.created))]});
+  var withDue=added.filter(function(x){return x.due});
+  var evDays=days.filter(function(k){return eventsOn(k).length}).length;
+  /* 期限がこの期間に来たタスク（期限が過ぎたもの・完了したもの） */
+  var due=all.filter(function(x){return x.due&&set[x.due]&&(x.due<t||x.done)});
+  var onTime=due.filter(function(x){return x.done&&x.doneAt<=x.due});
+  /* 習慣：今日より前の予定日 */
+  var P=0,D=0,X=0;
+  days.forEach(function(k){if(k>=t)return;habitList().forEach(function(h){var pl=planned(h,k),dn=isDone(k,h.id);if(pl){P++;if(dn)D++}else if(dn&&(!h.start||k>=h.start))X++})});
+  var moods=days.map(moodOn).filter(function(v){return v!==null});
+  var mAvg=moods.length?sum(moods)/moods.length:null;
+  var mSd=moods.length>1?Math.sqrt(sum(moods.map(function(v){return (v-mAvg)*(v-mAvg)}))/moods.length):null;
+  var low=moods.filter(function(v){return v<=2}).length;
+  var yts=days.filter(function(k){return k<t}).map(ytOn).filter(function(v){return v!==null});
+  var ytIn=yts.filter(function(v){return v<60}).length;
+  return {added:added.length,withDue:withDue.length,evDays:evDays,due:due.length,onTime:onTime.length,P:P,D:D,X:X,
+    moodN:moods.length,mAvg:mAvg,mSd:mSd,low:low,ytN:yts.length,ytIn:ytIn};
+}
+function ratio(a,b){return b?Math.round(a/b*100):null}
+function cmpPt(cur,prev){
+  if(cur===null||prev===null)return '<div class="cmp flat">前の'+V.per+"日と比べる記録がありません</div>";
+  var d=cur-prev;return '<div class="cmp num '+(d>0?"up":d<0?"down":"flat")+'">前の'+V.per+"日より "+(d>0?"+":d<0?"−":"±")+Math.abs(d)+"ポイント（前 "+prev+"%）</div>";
+}
+function sm(a,b){return '<small style="color:var(--muted);font-weight:500">（'+a+"/"+b+"）</small>"}
+function threeCards(days,prev){
+  var c=planStats(days),p=planStats(prev);
+  var setR=ratio(c.withDue,c.added),setP=ratio(p.withDue,p.added);
+  var adh=ratio(c.D+c.onTime,c.P+c.due),adhP=ratio(p.D+p.onTime,p.P+p.due);
+  function big(v,unit){return '<div class="big num">'+(v===null?"–":v)+'<small>'+unit+"</small></div>"}
+  return ''+
+  '<div class="ev" style="--c:var(--h4)"><div class="hd"><i></i>スケジュール設定力<span>期限つきで追加した割合</span></div>'+
+    big(setR,"%")+cmpPt(setR,setP)+
+    '<dl class="num"><dt>期限つきで追加</dt><dd>'+c.withDue+"件"+sm(c.withDue,c.added)+'</dd><dt>予定表に予定を入れた日</dt><dd>'+c.evDays+" / "+V.per+"日</dd></dl></div>"+
+  '<div class="ev" style="--c:var(--h0)"><div class="hd"><i></i>スケジュール通りの遂行力<span>予定・期限どおりの割合</span></div>'+
+    big(adh,"%")+cmpPt(adh,adhP)+
+    '<dl class="num"><dt>習慣を予定の曜日に実行</dt><dd>'+(c.P?ratio(c.D,c.P)+"%":"–")+sm(c.D,c.P)+'</dd><dt>タスクを期限内に完了</dt><dd>'+(c.due?ratio(c.onTime,c.due)+"%":"–")+sm(c.onTime,c.due)+'</dd><dt>予定外の日にも実行</dt><dd>'+c.X+"回</dd></dl></div>"+
+  '<div class="ev" style="--c:var(--h3)"><div class="hd"><i></i>メンタルコントロール力<span>気分の記録から</span></div>'+
+    (c.mAvg===null?'<div class="big num">–<small>気分が未記録</small></div><div class="cmp flat">記録画面の「気分」を1〜5で付けると出ます</div>':
+    '<div class="big num">'+fmt1(c.mAvg)+'<small>/ 5（'+MOOD[Math.round(c.mAvg)]+'）</small></div>'+(p.mAvg===null?'<div class="cmp flat">前の'+V.per+'日と比べる記録がありません</div>':(function(d){d=Math.round(d*10)/10;return '<div class="cmp num '+(d>0?"up":d<0?"down":"flat")+'">前の'+V.per+"日より "+(d>0?"+":d<0?"−":"±")+Math.abs(d).toFixed(1)+"（前 "+fmt1(p.mAvg)+"）</div>"})(c.mAvg-p.mAvg)))+
+    '<dl class="num"><dt>気分を記録した日</dt><dd>'+c.moodN+" / "+V.per+'日</dd><dt>落ち込んだ日（1〜2）</dt><dd>'+c.low+'日</dd><dt>気分の波（ばらつき）</dt><dd>'+(c.mSd===null?"–":fmt1(c.mSd))+'</dd><dt>YouTube 60分未満の日</dt><dd>'+(c.ytN?ratio(c.ytIn,c.ytN)+"%":"–")+sm(c.ytIn,c.ytN)+"</dd></dl></div>";
+}
 V.per=7;V.out="done";
 function addedOn(k){return taskList().filter(function(x){return x.created&&key(new Date(x.created))===k}).length}
 function doneOnDay(k){return taskList().filter(function(x){return x.done&&x.doneAt===k}).length}
@@ -924,8 +997,7 @@ function renderAna(){
     '<div class="ev" style="--c:var(--ex)"><div class="hd"><i></i>タスク遂行力<span>タスクを完了した数</span></div>'+
       '<div class="big num">'+c.done+'<small>件 / '+n+'日</small></div>'+cmpHtml(c.done,p.done,"件")+
       '<dl class="num"><dt>この期間に追加した分の完了率</dt><dd>'+pct(c.addedDone,c.added)+'<small style="color:var(--muted);font-weight:500">（'+c.addedDone+"/"+c.added+'）</small></dd>'+
-      '<dt>期限内に完了</dt><dd>'+pct(c.inTime,c.withDue)+'<small style="color:var(--muted);font-weight:500">（'+c.inTime+"/"+c.withDue+'）</small></dd>'+
-      '<dt>いま期限切れ</dt><dd'+(over?' style="color:var(--today)"':"")+'>'+over+"件</dd></dl></div>";
+      '<dt>いま期限切れ</dt><dd'+(over?' style="color:var(--today)"':"")+'>'+over+"件</dd></dl></div>"+threeCards(days,prev);
   renderAnaChart(days);
   renderCorr();
 }
@@ -975,6 +1047,7 @@ var OUT={
   add:{label:"タスク追加",unit:"件",col:"aw",f:function(k){return addedOn(k)},dec:1},
   done:{label:"タスク完了",unit:"件",col:"ex",f:function(k){return doneOnDay(k)},dec:1},
   rate:{label:"ほかの習慣の達成率",unit:"%",col:"accent",f:null,dec:0},
+  mood:{label:"気分",unit:"",col:"h3",f:function(k){return moodOn(k)},dec:1},
   yt:{label:"YouTube 視聴",unit:"分",col:"yt",f:function(k){return ytOn(k)},dec:0}
 };
 function habitRate(k,skip){
@@ -1016,7 +1089,7 @@ function renderCorr(){
   }).join(""):'<div class="empty">比べられる記録がまだありません。習慣やタスクを記録すると、ここに結果が出ます。</div>';
   var best=rows.filter(function(r){return !r.weak&&r.diff!==null&&Math.abs(r.diff)>=(o.dec?0.3:5)})[0];
   $("insight").innerHTML=best?'<div class="insight">'+esc(best.f.short)+(best.f.id.charAt(0)==="h"&&S.habits[best.f.id]?"をやった日":"")+"は、"+o.label+"が平均 <b class=\"num\">"+val(best.ma)+"</b>。やらなかった日は <b class=\"num\">"+val(best.mb)+"</b> です（"+best.na+"日 と "+best.nb+"日 の比較）。</div>":"";
-  $("anaHint").textContent="直近"+V.per+"日（今日を除く）で比べています。同じ日に起きたことの比較で、原因とは限りません。削除したタスクは数えていません。";
+  $("anaHint").textContent="直近"+V.per+"日（今日を除く）で比べています。同じ日に起きたことの比較で、原因とは限りません。削除したタスクは数えていません。上の評価のうち、習慣とYouTubeは今日を除いて数えています。";
 }
 $("anaSeg").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;V.per=+b.dataset.p;renderAna()});
 $("outSeg").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;V.out=b.dataset.o;renderCorr();[].forEach.call($("outSeg").querySelectorAll("button"),function(x){x.setAttribute("aria-pressed",x.dataset.o===V.out)})});
