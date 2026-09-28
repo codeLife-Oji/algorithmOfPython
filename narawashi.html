@@ -104,6 +104,10 @@ section.pane{min-width:0}
 .moods button[aria-pressed="true"]{background:var(--h3);border-color:var(--h3);color:var(--surface)}
 .moods button:disabled{opacity:.5;cursor:default}
 .focrow.done{border-color:var(--h0)} .focrow .ok{color:var(--h0)}
+.lunchrow.done{border-color:var(--h2)} .lunchrow .ok{color:var(--h2)}
+.lunchrow input{width:88px}
+.lunchsum{flex-basis:100%;font-size:12px;color:var(--muted)}
+.lunchsum:empty{display:none}
 .tg{display:inline-block;font-size:10.5px;font-weight:700;padding:0 6px;border-radius:5px;margin-left:6px;vertical-align:2px;border:1px solid var(--c);color:var(--c)}
 .tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .tags span{font-size:12px;color:var(--muted);font-weight:600;margin-right:2px}
@@ -347,6 +351,14 @@ nav.tabs .badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;he
         <button class="iconbtn" id="focInc" aria-label="15分増やす">＋</button>
         <span class="hm num" id="focHm"></span>
       </div>
+      <div class="ytrow lunchrow" id="lunchRow">
+        <label for="lunchYen">お昼ご飯代<span class="ok">記録済み</span></label>
+        <button class="iconbtn" id="lunchDec" aria-label="100円減らす">−</button>
+        <input type="number" id="lunchYen" inputmode="numeric" min="0" max="100000" step="1">
+        <span class="unit">円</span>
+        <button class="iconbtn" id="lunchInc" aria-label="100円増やす">＋</button>
+        <div class="lunchsum num" id="lunchSum"></div>
+      </div>
       <div class="moodrow" id="moodRow"><span>気分</span><span class="mtx" id="moodTx"></span>
         <div class="moods" id="moods" role="group" aria-label="気分（1 とても悪い 〜 5 とても良い）"><button data-v="1" aria-label="1 とても悪い">1</button><button data-v="2" aria-label="2 悪い">2</button><button data-v="3" aria-label="3 ふつう">3</button><button data-v="4" aria-label="4 良い">4</button><button data-v="5" aria-label="5 とても良い">5</button></div>
       </div>
@@ -414,7 +426,7 @@ nav.tabs .badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;he
         <div class="tip" id="tip" hidden></div>
       </div>
       <div class="sub" style="margin-top:22px">これをやった日の結果</div>
-      <div class="seg" id="outSeg"><button data-o="add">問題意識</button><button data-o="done">遂行力</button><button data-o="rate">習慣達成率</button><button data-o="mood">気分</button><button data-o="focus">集中時間</button><button data-o="yt">YouTube</button></div>
+      <div class="seg" id="outSeg"><button data-o="add">問題意識</button><button data-o="done">遂行力</button><button data-o="rate">習慣達成率</button><button data-o="mood">気分</button><button data-o="focus">集中時間</button><button data-o="lunch">昼食代</button><button data-o="yt">YouTube</button></div>
       <div id="insight"></div>
       <div class="cor" id="cor"></div>
       <p class="hint" id="anaHint"></p>
@@ -561,6 +573,7 @@ function renderRec(){
   renderYt();
   renderMood();
   renderFocus();
+  renderLunch();
 }
 
 /* ---------- YouTube 視聴時間（分・日ごと） ---------- */
@@ -593,6 +606,33 @@ function stepYt(d){
 }
 $("ytDec").onclick=function(){stepYt(-15)};
 $("ytInc").onclick=function(){stepYt(15)};
+/* ---------- お昼ご飯代（円・日ごと） ---------- */
+function lunchOn(k){var v=(month(k).lunch||{})[k];return typeof v==="number"?v:null}
+function yen(n){return Math.round(n).toLocaleString("ja-JP")+"円"}
+function renderLunch(){
+  var k=V.day,fut=k>todayKey(),inp=$("lunchYen"),v=lunchOn(k);
+  if(document.activeElement!==inp||inp.dataset.k!==k){inp.value=v===null?"":v;inp.dataset.k=k}
+  inp.disabled=$("lunchDec").disabled=$("lunchInc").disabled=fut;
+  $("lunchRow").classList.toggle("done",v!==null);
+  /* その月の合計と、記録した日の平均 */
+  var L=month(k).lunch||{},ks=Object.keys(L),tot=ks.reduce(function(a,x){return a+(+L[x]||0)},0),d=parse(k);
+  $("lunchSum").innerHTML=ks.length?(d.getMonth()+1)+"月の合計 <b>"+yen(tot)+"</b>・記録した日の平均 "+yen(tot/ks.length)+"（"+ks.length+"日）":"";
+}
+var lunchT;
+function setLunch(k,v){
+  var m=k.slice(0,7),L=S.logs[m]=S.logs[m]||{done:{},notes:{}};L.lunch=L.lunch||{};
+  if(v===null)delete L.lunch[k];else L.lunch[k]=v;
+  dirty[m]=true;render();
+  clearTimeout(lunchT);lunchT=setTimeout(function(){writeMonth(m)},500);
+}
+$("lunchYen").addEventListener("input",function(){
+  var s=this.value.trim();if(s===""){setLunch(V.day,null);return}
+  var n=Math.max(0,Math.min(100000,Math.round(+s)));if(isNaN(n))return;setLunch(V.day,n);
+});
+function stepLunch(d){var k=V.day,n=Math.max(0,Math.min(100000,(lunchOn(k)||0)+d));$("lunchYen").value=n;setLunch(k,n)}
+$("lunchDec").onclick=function(){stepLunch(-100)};
+$("lunchInc").onclick=function(){stepLunch(100)};
+
 /* ---------- 集中時間（分・日ごと） ---------- */
 function renderFocus(){
   var k=V.day,fut=k>todayKey(),inp=$("focMin"),v=(month(k).focus||{})[k];v=typeof v==="number"?v:null;
@@ -1212,6 +1252,7 @@ var OUT={
   add:{label:"タスク追加",unit:"件",col:"aw",f:function(k){return addedOn(k)},dec:1},
   done:{label:"タスク完了",unit:"件",col:"ex",f:function(k){return doneOnDay(k)},dec:1},
   rate:{label:"ほかの習慣の達成率",unit:"%",col:"accent",f:null,dec:0},
+  lunch:{label:"お昼ご飯代",unit:"円",col:"h2",f:function(k){return lunchOn(k)},dec:0},
   focus:{label:"集中時間",unit:"分",col:"h0",f:function(k){return focusOn(k)},dec:0},
   mood:{label:"気分",unit:"",col:"h3",f:function(k){return moodOn(k)},dec:1},
   yt:{label:"YouTube 視聴",unit:"分",col:"yt",f:function(k){return ytOn(k)},dec:0}
@@ -1246,7 +1287,7 @@ function renderCorr(){
   function val(v){return v===null?"–":(o.dec?fmt1(v):Math.round(v))+o.unit}
   var lowGood=V.out==="yt";
   $("cor").innerHTML=rows.length?rows.map(function(r){
-    var d=r.diff,cls=d===null||Math.abs(d)<(o.dec?0.05:0.5)?"flat":((d>0)!==lowGood?"up":"down");
+    var d=r.diff,cls=V.out==="lunch"?"flat":d===null||Math.abs(d)<(o.dec?0.05:0.5)?"flat":((d>0)!==lowGood?"up":"down");
     var dt=d===null?"比較できません":(d>0?"+":d<0?"−":"±")+(o.dec?fmt1(Math.abs(d)):Math.round(Math.abs(d)))+o.unit;
     return '<div class="crow'+(r.weak?" weak":"")+'" style="--c:var(--'+r.f.col+')"><div class="nm"><i></i>'+esc(r.f.name)+'</div><div class="df num '+cls+'">'+dt+"</div>"+
       '<div class="bars num" style="--c:var(--'+o.col+')"><span>やった '+r.na+'日</span><div class="trk"><b style="width:'+((r.ma||0)/mx*100)+'%"></b></div><em>'+val(r.ma)+"</em>"+
