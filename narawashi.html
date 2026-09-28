@@ -144,6 +144,12 @@ section.pane{min-width:0}
 .trow .chk svg{width:15px;height:15px;opacity:0;transform:scale(.6);transition:.15s}
 .trow.done .chk{background:var(--c)}
 .trow.done .chk svg{opacity:1;transform:none}
+.trow .chk.ai{--c:var(--h4);margin-left:-4px}
+.trow .chk.ai svg{opacity:0;transform:scale(.6)}
+.trow .chk.ai.on{background:var(--c)}
+.trow .chk.ai.on svg{opacity:1;transform:none}
+.trow.done .chk.ai:not(.on){background:transparent}
+.trow.done .chk.ai:not(.on) svg{opacity:0}
 .trow .body{flex:1;min-width:0;text-align:left;display:flex;flex-direction:column;gap:1px;padding-block:2px}
 .trow .body b{font-weight:600;font-size:15px;overflow-wrap:anywhere}
 .trow.done .body b{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--future)}
@@ -704,6 +710,7 @@ function taskRow(t,grip){
   return '<div class="trow'+(t.done?" done":"")+'" data-t="'+t.id+'">'+
     (grip===true?'<button class="grip" aria-label="'+esc(t.title)+'を並び替え（↑↓キーでも動かせます）">'+GRIP+"</button>":"")+
     '<button class="chk" data-act="tog" aria-pressed="'+!!t.done+'" aria-label="'+esc(t.title)+'を'+(t.done?"未完了に戻す":"完了にする")+'">'+CHECK+"</button>"+
+    '<button class="chk ai'+(t.ai?" on":"")+'" data-act="ai" aria-pressed="'+!!t.ai+'" aria-label="'+esc(t.title)+'のAIへの依頼完了">'+CHECK+"</button>"+
     '<button class="body" data-act="edit"><b>'+esc(t.title)+(t.work?'<span class="tg" style="--c:var(--h1)">仕事</span>':"")+(t.goal?'<span class="tg" style="--c:var(--h2)">目標</span>':"")+(t.imp?'<span class="tg" style="--c:var(--h6)">重要</span>':"")+"</b>"+(dl.t?'<span class="due num '+dl.c+'">'+dl.t+"</span>":"")+"</button></div>";
 }
 function byDue(a,b){return String(a.due).localeCompare(String(b.due))||(a.created||0)-(b.created||0)}
@@ -746,7 +753,9 @@ function toggleTask(id){
 function onTaskClick(e){
   var b=e.target.closest("[data-act]");if(!b)return;
   var id=b.closest(".trow").dataset.t;
-  if(b.dataset.act==="tog")toggleTask(id);else openTaskSheet(id);
+  if(b.dataset.act==="tog")toggleTask(id);
+  else if(b.dataset.act==="ai"){var x=S.tasks[id];if(!x)return;x.ai=!x.ai;x.aiAt=x.ai?todayKey():null;writeTask(id);render()}
+  else openTaskSheet(id);
 }
 $("taskList").addEventListener("click",onTaskClick);
 /* ---------- タスクの並び替え（ドラッグ＆ドロップ） ---------- */
