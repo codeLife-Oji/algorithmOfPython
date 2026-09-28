@@ -304,7 +304,7 @@ body:has(.trow.dragging){user-select:none;-webkit-user-select:none}
 .crow.weak{opacity:.72}
 
 /* ---- タブバー ---- */
-nav.tabs{flex:none;order:2;z-index:10;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr)}
+nav.tabs{flex:none;order:2;z-index:10;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(6,1fr)}
 nav.tabs button{height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:var(--muted);position:relative}
 nav.tabs button svg{width:22px;height:22px}
 nav.tabs button[aria-current="page"]{color:var(--accent)}
@@ -425,6 +425,18 @@ nav.tabs .badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;he
       <div class="seg" id="taskFilter" style="margin-top:10px"><button data-f="all">すべて</button><button data-f="work">仕事</button><button data-f="other">仕事以外</button></div>
       <div id="taskList"></div>
     </section>
+    <section class="pane" id="goal" aria-label="目標" hidden>
+      <div class="calhead"><h2>目標</h2></div>
+      <form class="qadd" id="gadd" autocomplete="off">
+        <div class="ln">
+          <input type="text" id="gTitle" maxlength="80" aria-label="目標に関係あるタスク名" placeholder="目標に関係あるタスクを追加">
+          <button class="primary" type="submit">追加</button>
+        </div>
+      </form>
+      <div class="progress" id="gSum"></div>
+      <div id="goalList"></div>
+    </section>
+
     <section class="pane" id="ana" aria-label="分析" hidden>
       <div class="calhead"><h2>分析</h2></div>
       <div class="radar" id="radar"></div>
@@ -453,6 +465,7 @@ nav.tabs .badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;he
   <button data-v="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>カレンダー</button>
   <button data-v="hab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M5 12h14M5 17h9"/></svg>習慣</button>
   <button data-v="task"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3.5"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>タスク<span class="badge num" id="taskBadge" hidden></span></button>
+  <button data-v="goal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>目標</button>
   <button data-v="ana"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg>分析</button>
 </nav>
 
@@ -480,7 +493,7 @@ var V={view:"rec",day:todayKey(),mon:todayKey().slice(0,7),filter:"all",calMode:
 /* YouTube の記録を達成率に数え始める日（機能を入れた日） */
 var YT_START="2026-09-24";
 function ytPlanned(k){return k>=YT_START}
-var h0=(location.hash||"").slice(1);if(h0==="cal"||h0==="hab"||h0==="task"||h0==="ana")V.view=h0;
+var h0=(location.hash||"").slice(1);if(h0==="cal"||h0==="hab"||h0==="task"||h0==="goal"||h0==="ana")V.view=h0;
 var db=null,dbReady=false,dirty={},timers={},chains={};
 
 function saveLocal(){try{localStorage.setItem(CACHE,JSON.stringify(S))}catch(e){}}
@@ -758,6 +771,27 @@ function onTaskClick(e){
   else openTaskSheet(id);
 }
 $("taskList").addEventListener("click",onTaskClick);
+/* ---------- 目標タブ：「目標に関係あり」のタスク一覧 ---------- */
+function renderGoal(){
+  var all=taskList().filter(function(x){return x.goal});
+  var open=all.filter(function(x){return !x.done}).sort(function(a,b){return (!a.due)-(!b.due)||byDue(a,b)});
+  var done=all.filter(function(x){return x.done}).sort(function(a,b){return String(b.doneAt).localeCompare(String(a.doneAt))});
+  var pct=all.length?Math.round(done.length/all.length*100):0;
+  $("gSum").innerHTML=all.length?'<b class="num">完了 '+done.length+" / "+all.length+'</b><div class="bar"><span style="width:'+pct+'%"></span></div><span class="num" style="font-size:12px;color:var(--muted)">'+pct+"%</span>":"";
+  var html=open.length?'<div class="sub">未完了 <span class="num">'+open.length+'</span></div><div class="list">'+open.map(taskRow).join("")+"</div>":
+    '<div class="empty">'+(all.length?"目標に関係あるタスクはすべて完了しています。":"まだありません。上の欄から追加するか、タスクの編集画面で「目標に関係あり」を付けると、ここに並びます。")+"</div>";
+  if(done.length)html+='<details class="donebox" id="gDoneBox"'+(V.gDoneOpen?" open":"")+'><summary>完了済み <span class="num">'+done.length+'</span></summary><div class="list">'+done.map(taskRow).join("")+"</div></details>";
+  $("goalList").innerHTML=html;
+  var gb=$("gDoneBox");if(gb)gb.addEventListener("toggle",function(){V.gDoneOpen=gb.open});
+}
+$("goalList").addEventListener("click",onTaskClick);
+$("gadd").addEventListener("submit",function(e){
+  e.preventDefault();
+  var inp=$("gTitle"),n=inp.value.trim();if(!n){inp.focus();return}
+  var id="t"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  S.tasks[id]={title:n,due:"",done:false,doneAt:null,created:Date.now(),work:false,goal:true,imp:false};
+  writeTask(id);inp.value="";render();inp.focus();
+});
 /* ---------- タスクの並び替え（ドラッグ＆ドロップ） ---------- */
 /* 手で並べた順（ord）を優先し、まだ並べていないタスクは期限順で後ろに付ける */
 function byOrd(a,b){
@@ -1404,6 +1438,7 @@ function layout(){
   $("hab").hidden=!(v==="hab");
   $("task").hidden=!(v==="task");
   $("ana").hidden=!(v==="ana");
+  $("goal").hidden=!(v==="goal");
   var nav=$("tabs");
   if(w){if(nav.parentNode!==$("navslot"))$("navslot").appendChild(nav)}
   else if(nav.parentNode!==document.body)document.body.appendChild(nav);
@@ -1416,7 +1451,7 @@ function setSync(err){
   if(err){el.hidden=false;el.className="sync";el.lastChild.textContent="保存に失敗・端末に保存中";return}
   el.hidden=true;return;
 }
-function render(){layout();renderRec();updateBadge();if(!$("cal").hidden)renderCal();if(!$("hab").hidden)renderHab();if(!$("task").hidden)renderTask();if(!$("ana").hidden)renderAna()}
+function render(){layout();renderRec();updateBadge();if(!$("cal").hidden)renderCal();if(!$("hab").hidden)renderHab();if(!$("task").hidden)renderTask();if(!$("goal").hidden)renderGoal();if(!$("ana").hidden)renderAna()}
 
 /* 日付が変わったら今日に追従 */
 var lastToday=todayKey();
