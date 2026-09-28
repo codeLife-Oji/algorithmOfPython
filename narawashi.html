@@ -163,6 +163,12 @@ details.donebox summary::-webkit-details-marker{display:none}
 details.donebox summary::before{content:"▸ "}
 details.donebox[open] summary::before{content:"▾ "}
 .recTasks .trow{min-height:52px}
+.trow .grip{flex:none;width:28px;height:40px;margin-left:-8px;margin-right:-4px;display:grid;place-items:center;color:var(--future);cursor:grab;touch-action:none;border-radius:8px}
+.trow .grip svg{width:18px;height:18px}
+.trow .grip:hover{color:var(--muted)}
+.trow.dragging{position:relative;z-index:3;box-shadow:0 8px 24px rgba(0,0,0,.18);border-color:var(--accent);transform:scale(1.02)}
+.trow.dragging .grip{cursor:grabbing;color:var(--accent)}
+body:has(.trow.dragging){user-select:none;-webkit-user-select:none}
 
 /* ---- カレンダー ---- */
 .calhead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
@@ -692,9 +698,11 @@ function dueLabel(due){
   if(diff===1)return {t:"明日まで",c:""};
   return {t:md+"まで",c:""};
 }
-function taskRow(t){
+var GRIP='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
+function taskRow(t,grip){
   var dl=t.done?{t:t.doneAt?"完了 "+(parse(t.doneAt).getMonth()+1)+"/"+parse(t.doneAt).getDate():"完了",c:""}:dueLabel(t.due);
   return '<div class="trow'+(t.done?" done":"")+'" data-t="'+t.id+'">'+
+    (grip===true?'<button class="grip" aria-label="'+esc(t.title)+'を並び替え（↑↓キーでも動かせます）">'+GRIP+"</button>":"")+
     '<button class="chk" data-act="tog" aria-pressed="'+!!t.done+'" aria-label="'+esc(t.title)+'を'+(t.done?"未完了に戻す":"完了にする")+'">'+CHECK+"</button>"+
     '<button class="body" data-act="edit"><b>'+esc(t.title)+(t.work?'<span class="tg" style="--c:var(--h1)">仕事</span>':"")+(t.goal?'<span class="tg" style="--c:var(--h2)">目標</span>':"")+(t.imp?'<span class="tg" style="--c:var(--h6)">重要</span>':"")+"</b>"+(dl.t?'<span class="due num '+dl.c+'">'+dl.t+"</span>":"")+"</button></div>";
 }
@@ -706,13 +714,13 @@ $("taskFilter").addEventListener("click",function(e){var b=e.target.closest("but
 function renderTask(){
   [].forEach.call($("taskFilter").querySelectorAll("button"),function(b){b.setAttribute("aria-pressed",b.dataset.f===V.tf)});
   var t=todayKey(),open=openTasks().filter(tfOk);
-  var over=open.filter(function(x){return x.due&&x.due<t}).sort(byDue);
-  var tod=open.filter(function(x){return x.due===t}).sort(byDue);
-  var next=open.filter(function(x){return x.due&&x.due>t}).sort(byDue);
-  var none=open.filter(function(x){return !x.due}).sort(function(a,b){return (a.created||0)-(b.created||0)});
+  var over=open.filter(function(x){return x.due&&x.due<t}).sort(byOrd);
+  var tod=open.filter(function(x){return x.due===t}).sort(byOrd);
+  var next=open.filter(function(x){return x.due&&x.due>t}).sort(byOrd);
+  var none=open.filter(function(x){return !x.due}).sort(byOrd);
   var done=taskList().filter(function(x){return x.done&&tfOk(x)}).sort(function(a,b){return String(b.doneAt).localeCompare(String(a.doneAt))||(b.created||0)-(a.created||0)});
-  function grp(label,arr,cls){return arr.length?'<div class="sub'+(cls?" "+cls:"")+'">'+label+" <span class=\"num\">"+arr.length+'</span></div><div class="list">'+arr.map(taskRow).join("")+"</div>":""}
-  var html=grp("期限切れ",over,"warn")+grp("今日",tod)+grp("これから",next)+grp("期限なし",none);
+  function grp(label,arr,cls,g){return arr.length?'<div class="sub'+(cls?" "+cls:"")+'">'+label+" <span class=\"num\">"+arr.length+'</span></div><div class="list" data-g="'+g+'">'+arr.map(function(x){return taskRow(x,true)}).join("")+"</div>":""}
+  var html=grp("期限切れ",over,"warn","over")+grp("今日",tod,"","tod")+grp("これから",next,"","next")+grp("期限なし",none,"","none");
   if(!open.length)html+='<div class="empty" style="margin-top:14px">'+(V.tf==="all"?"未完了のタスクはありません。上の欄から追加できます。":"この分類の未完了タスクはありません。")+'</div>';
   if(done.length)html+='<details class="donebox" id="doneBox"'+(V.doneOpen?" open":"")+'><summary>完了済み <span class="num">'+done.length+'</span></summary><div class="list">'+done.slice(0,50).map(taskRow).join("")+"</div></details>";
   $("taskList").innerHTML=html;
@@ -721,7 +729,7 @@ function renderTask(){
 /* 記録画面：その日のタスク（今日なら期限切れも）を習慣の下に出す */
 function renderRecTasks(){
   var k=V.day,t=todayKey(),open=openTasks();
-  var arr=open.filter(function(x){return x.due===k||(k===t&&x.due&&x.due<t)}).sort(byDue);
+  var arr=open.filter(function(x){return x.due===k||(k===t&&x.due&&x.due<t)}).sort(byOrd);
   var doneHere=taskList().filter(function(x){return x.done&&x.doneAt===k&&x.due===k});
   arr=arr.concat(doneHere);
   $("recTasks").innerHTML=arr.length?'<div class="sub">'+(k===t?"今日のタスク":"この日が期限のタスク")+'</div><div class="list">'+arr.map(taskRow).join("")+"</div>":"";
@@ -741,6 +749,71 @@ function onTaskClick(e){
   if(b.dataset.act==="tog")toggleTask(id);else openTaskSheet(id);
 }
 $("taskList").addEventListener("click",onTaskClick);
+/* ---------- タスクの並び替え（ドラッグ＆ドロップ） ---------- */
+/* 手で並べた順（ord）を優先し、まだ並べていないタスクは期限順で後ろに付ける */
+function byOrd(a,b){
+  var ha=typeof a.ord==="number",hb=typeof b.ord==="number";
+  if(ha&&hb)return a.ord-b.ord||byDue(a,b);
+  if(ha!==hb)return ha?-1:1;
+  return byDue(a,b);
+}
+function grpKey(x,t){return !x.due?"none":x.due<t?"over":x.due===t?"tod":"next"}
+/* 表示中の並び（絞り込み中は見えている分だけ）を、グループ全体の順番に反映して保存する */
+function saveOrder(g,ids){
+  var t=todayKey();
+  var full=openTasks().filter(function(x){return grpKey(x,t)===g}).sort(byOrd);
+  var shown={};ids.forEach(function(id){shown[id]=1});
+  var q=ids.slice(),out=full.map(function(x){return shown[x.id]?q.shift():x.id});
+  out.forEach(function(id,i){var x=S.tasks[id];if(x&&x.ord!==i){x.ord=i;writeTask(id)}});
+  render();
+}
+(function(){
+  var drag=null,sc=$("scroller"),raf=0;
+  function rowsOf(list){return [].slice.call(list.querySelectorAll(".trow"))}
+  function place(y){
+    var list=drag.list,rows=rowsOf(list).filter(function(r){return r!==drag.row}),before=null;
+    for(var i=0;i<rows.length;i++){var b=rows[i].getBoundingClientRect();if(y<b.top+b.height/2){before=rows[i];break}}
+    if(before!==drag.row.nextSibling||(!before&&list.lastElementChild!==drag.row))list.insertBefore(drag.row,before);
+  }
+  function autoScroll(){
+    if(!drag)return;
+    var b=sc.getBoundingClientRect(),y=drag.y,d=0;
+    if(y<b.top+60)d=-8;else if(y>b.bottom-60)d=8;
+    if(d){sc.scrollTop+=d;place(y)}
+    raf=requestAnimationFrame(autoScroll);
+  }
+  $("taskList").addEventListener("pointerdown",function(e){
+    var g=e.target.closest(".grip");if(!g)return;
+    var row=g.closest(".trow"),list=row.parentNode;
+    e.preventDefault();
+    drag={row:row,list:list,y:e.clientY,start:rowsOf(list).map(function(r){return r.dataset.t}).join(),id:e.pointerId};
+    try{g.setPointerCapture(e.pointerId)}catch(_){}
+    row.classList.add("dragging");
+    raf=requestAnimationFrame(autoScroll);
+  });
+  $("taskList").addEventListener("pointermove",function(e){if(!drag||e.pointerId!==drag.id)return;e.preventDefault();drag.y=e.clientY;place(e.clientY)});
+  function end(e){
+    if(!drag||e.pointerId!==drag.id)return;
+    cancelAnimationFrame(raf);
+    var d=drag;drag=null;d.row.classList.remove("dragging");
+    var ids=rowsOf(d.list).map(function(r){return r.dataset.t});
+    if(ids.join()!==d.start)saveOrder(d.list.dataset.g,ids);
+  }
+  $("taskList").addEventListener("pointerup",end);
+  $("taskList").addEventListener("pointercancel",end);
+  /* キーボード：つまみにフォーカスして ↑↓ で1つずつ動かす */
+  $("taskList").addEventListener("keydown",function(e){
+    var g=e.target.closest(".grip");if(!g||(e.key!=="ArrowUp"&&e.key!=="ArrowDown"))return;
+    e.preventDefault();
+    var row=g.closest(".trow"),list=row.parentNode,id=row.dataset.t;
+    var sib=e.key==="ArrowUp"?row.previousElementSibling:row.nextElementSibling;if(!sib)return;
+    list.insertBefore(row,e.key==="ArrowUp"?sib:sib.nextSibling);
+    saveOrder(list.dataset.g,rowsOf(list).map(function(r){return r.dataset.t}));
+    var ng=document.querySelector('.trow[data-t="'+id+'"] .grip');if(ng)ng.focus();
+  });
+})();
+
+
 $("recTasks").addEventListener("click",onTaskClick);
 
 var qDue="",qTag={work:false,goal:false,imp:false};
@@ -796,6 +869,8 @@ function openTaskSheet(id){
     /* 期限を後ろにずらした・外したら「先延ばし」として日付を残す */
     if(!old.done&&old.due&&(!due||due>old.due))post.push(todayKey());
     S.tasks[id]=Object.assign({},old,{title:n,due:due,work:tg.work,goal:tg.goal,imp:tg.imp,post:post});
+    /* 期限を変えたら別のグループに移るので、手で並べた順は外す */
+    if((old.due||"")!==due)delete S.tasks[id].ord;
     writeTask(id);close();render();
   }
   $("tSave").onclick=save;
