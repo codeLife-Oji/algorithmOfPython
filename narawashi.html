@@ -116,6 +116,7 @@ section.pane{min-width:0}
 .seg{display:inline-flex;flex-wrap:wrap;max-width:100%;gap:2px;background:var(--sunk);border-radius:10px;padding:3px;margin-bottom:10px}
 .seg button{height:32px;padding:0 14px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink)}
+#habFilter button{padding:0 10px}
 .cell .evd{display:flex;gap:3px;justify-content:center;margin-top:auto;margin-bottom:auto}
 .cell .evd i{width:6px;height:6px;border-radius:50%;background:var(--accent)}
 .cell .evs{display:none;width:100%;flex-direction:column;gap:2px;min-width:0}
@@ -403,6 +404,7 @@ nav.tabs .badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;he
 
     <section class="pane" id="hab" aria-label="習慣" hidden>
       <div class="calhead"><h2>習慣と予定</h2><button class="primary" id="addHab">＋ 追加</button></div>
+      <div class="seg" id="habFilter"></div>
       <div class="list" id="habList"></div>
     </section>
 
@@ -422,7 +424,7 @@ nav.tabs .badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;he
           <input type="date" id="qDate" aria-label="期限の日付">
         </div>
       </form>
-      <div class="seg" id="taskFilter" style="margin-top:10px"><button data-f="all">すべて</button><button data-f="work">仕事</button><button data-f="other">仕事以外</button></div>
+      <div class="seg" id="taskFilter" style="margin-top:10px"><button data-f="all">すべて</button><button data-f="work">仕事</button><button data-f="other">仕事以外</button><button data-f="goal">目的</button></div>
       <div id="taskList"></div>
     </section>
     <section class="pane" id="goal" aria-label="目標" hidden>
@@ -729,7 +731,7 @@ function taskRow(t,grip){
 function byDue(a,b){return String(a.due).localeCompare(String(b.due))||(a.created||0)-(b.created||0)}
 function openTasks(){return taskList().filter(function(t){return !t.done})}
 V.tf="all";
-function tfOk(x){return V.tf==="all"||(V.tf==="work")===!!x.work}
+function tfOk(x){return V.tf==="all"||(V.tf==="goal"?!!x.goal:(V.tf==="work")===!!x.work)}
 $("taskFilter").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;V.tf=b.dataset.f;renderTask()});
 function renderTask(){
   [].forEach.call($("taskFilter").querySelectorAll("button"),function(b){b.setAttribute("aria-pressed",b.dataset.f===V.tf)});
@@ -741,7 +743,7 @@ function renderTask(){
   var done=taskList().filter(function(x){return x.done&&tfOk(x)}).sort(function(a,b){return String(b.doneAt).localeCompare(String(a.doneAt))||(b.created||0)-(a.created||0)});
   function grp(label,arr,cls,g){return arr.length?'<div class="sub'+(cls?" "+cls:"")+'">'+label+" <span class=\"num\">"+arr.length+'</span></div><div class="list" data-g="'+g+'">'+arr.map(function(x){return taskRow(x,true)}).join("")+"</div>":""}
   var html=grp("期限切れ",over,"warn","over")+grp("今日",tod,"","tod")+grp("これから",next,"","next")+grp("期限なし",none,"","none");
-  if(!open.length)html+='<div class="empty" style="margin-top:14px">'+(V.tf==="all"?"未完了のタスクはありません。上の欄から追加できます。":"この分類の未完了タスクはありません。")+'</div>';
+  if(!open.length)html+='<div class="empty" style="margin-top:14px">'+(V.tf==="all"?"未完了のタスクはありません。上の欄から追加できます。":(V.tf==="goal"?"目的に関係ある未完了タスクはありません。編集画面で「目標に関係あり」を付けると、ここに並びます。":"この分類の未完了タスクはありません。"))+'</div>';
   if(done.length)html+='<details class="donebox" id="doneBox"'+(V.doneOpen?" open":"")+'><summary>完了済み <span class="num">'+done.length+'</span></summary><div class="list">'+done.slice(0,50).map(taskRow).join("")+"</div></details>";
   $("taskList").innerHTML=html;
   var db2=$("doneBox");if(db2)db2.addEventListener("toggle",function(){V.doneOpen=db2.open});
@@ -891,7 +893,7 @@ function openTaskSheet(id){
     '<div class="field"><label for="tName">タスク名</label><input type="text" id="tName" maxlength="80" value="'+esc(x.title)+'"></div>'+
     '<div class="field"><span class="lb">期限</span><div class="presets" id="tPre"><button class="pill" data-q="none">なし</button><button class="pill" data-q="0">今日</button><button class="pill" data-q="1">明日</button><input type="date" id="tDate" aria-label="期限の日付"></div></div>'+
     '<div class="field"><span class="lb">印</span><div class="presets" id="tTags"><button class="pill" data-g="work">仕事</button><button class="pill" data-g="goal">目標に関係あり</button><button class="pill" data-g="imp">重要</button></div></div>'+
-    '<div class="sheetact"><button class="danger" id="tDel">削除</button><button class="pill" id="tCancel" style="height:46px">閉じる</button><button class="primary" id="tSave">保存</button></div>'+
+    '<div class="sheetact"><button class="danger" id="tDel">削除</button><button class="pill" id="tHab" style="height:46px">習慣へ</button><button class="pill" id="tCancel" style="height:46px">閉じる</button><button class="primary" id="tSave">保存</button></div>'+
     "</div></div>";
   function paint(){
     var t=todayKey();
@@ -917,6 +919,11 @@ function openTaskSheet(id){
     writeTask(id);close();render();
   }
   $("tSave").onclick=save;
+  /* タスクを習慣にする：名前と分類を引き継いで習慣の追加画面を開き、保存したらタスクは消す */
+  $("tHab").onclick=function(){
+    var n=$("tName").value.trim()||x.title;close();
+    openSheet(null,{name:n.slice(0,40),cat:tg.goal?"goal":"",task:id});
+  };
   $("tName").addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.isComposing)save()});
   var armed=false;$("tDel").onclick=function(){
     if(!armed){armed=true;this.classList.add("armed");this.textContent="削除する";return}
@@ -1086,10 +1093,20 @@ function daysLabel(ds){
   if(n===2&&ds[0]&&ds[6])return "土日";
   return WD.filter(function(w,i){return ds[i]}).join("・");
 }
+var HCATS=[["clean","掃除"],["health","健康"],["goal","目的"],["hus","夫"]];
+function catName(c){for(var i=0;i<HCATS.length;i++)if(HCATS[i][0]===c)return HCATS[i][1];return ""}
+V.hf="all";
+$("habFilter").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;V.hf=b.dataset.f;renderHab()});
 function renderHab(){
-  var hs=habitList();
+  var all=habitList(),none=all.filter(function(h){return !catName(h.cat)}).length;
+  if(V.hf==="none"&&!none)V.hf="all";
+  $("habFilter").innerHTML=[["all","すべて"]].concat(HCATS,none&&all.length>none?[["none","未分類"]]:[]).map(function(c){
+    var n=c[0]==="all"?all.length:c[0]==="none"?none:all.filter(function(h){return h.cat===c[0]}).length;
+    return '<button data-f="'+c[0]+'" aria-pressed="'+(V.hf===c[0])+'">'+c[1]+(c[0]==="all"?"":' <span class="num">'+n+"</span>")+"</button>"}).join("");
+  var hs=all.filter(function(h){return V.hf==="all"||(V.hf==="none"?!catName(h.cat):h.cat===V.hf)});
+  if(!hs.length&&all.length){$("habList").innerHTML='<div class="empty">この分類の習慣はありません。習慣の編集画面で分類を選ぶと、ここに並びます。</div>';return}
   $("habList").innerHTML=hs.length?hs.map(function(h){
-    return '<button class="habrow" data-h="'+h.id+'" style="--c:var(--'+h.color+')"><span class="sw"></span><span class="tx"><b>'+esc(h.name)+"</b><span>"+daysLabel(h.days)+'</span></span><span class="st"><b class="num">'+streak(h)+"</b>連続</span></button>";
+    return '<button class="habrow" data-h="'+h.id+'" style="--c:var(--'+h.color+')"><span class="sw"></span><span class="tx"><b>'+esc(h.name)+"</b><span>"+(catName(h.cat)?catName(h.cat)+"・":"")+daysLabel(h.days)+'</span></span><span class="st"><b class="num">'+streak(h)+"</b>連続</span></button>";
   }).join(""):"";
 }
 $("habList").addEventListener("click",function(e){var b=e.target.closest(".habrow");if(b)openSheet(b.dataset.h)});
@@ -1097,26 +1114,31 @@ $("addHab").onclick=function(){openSheet(null)};
 $("addFromRec").onclick=function(){openSheet(null)};
 
 /* ---------- 編集シート ---------- */
-function openSheet(id){
-  var h=id?S.habits[id]:null;
+function openSheet(id,pre){
+  var h=id?S.habits[id]:null;pre=pre||{};
   var used=habitList().map(function(x){return x.color});
   var col=h?h.color:(COLORS.filter(function(c){return used.indexOf(c)<0})[0]||COLORS[habitList().length%8]);
   var days=h?h.days.slice():[1,1,1,1,1,1,1];
+  var cat=h?(catName(h.cat)?h.cat:""):pre.task?pre.cat:(V.hf!=="all"&&V.hf!=="none"?V.hf:"");
   var root=$("sheetRoot");
   root.innerHTML='<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">'+
-    '<h3 id="shT">'+(h?"習慣を編集":"習慣を追加")+"</h3>"+
-    '<div class="field"><label for="fName">名前</label><input type="text" id="fName" maxlength="40" value="'+(h?esc(h.name):"")+'"></div>'+
+    '<h3 id="shT">'+(h?"習慣を編集":pre.task?"タスクを習慣にする":"習慣を追加")+"</h3>"+
+    (pre.task?'<p class="lead">保存すると、このタスクはタスク一覧から消えて習慣に移ります。</p>':"")+
+    '<div class="field"><label for="fName">名前</label><input type="text" id="fName" maxlength="40" value="'+(h?esc(h.name):pre.name?esc(pre.name):"")+'"></div>'+
     '<div class="field"><span class="lb">やる曜日</span><div class="wd" id="fDays">'+WD.map(function(w,i){return '<button data-i="'+i+'">'+w+"</button>"}).join("")+'</div><div class="presets"><button class="pill" data-p="all">毎日</button><button class="pill" data-p="wk">平日</button><button class="pill" data-p="we">土日</button><button class="pill" data-p="none">なし</button></div></div>'+
+    '<div class="field"><span class="lb">分類</span><div class="presets" id="fCat">'+HCATS.map(function(c){return '<button class="pill" data-k="'+c[0]+'">'+c[1]+"</button>"}).join("")+"</div></div>"+
     '<div class="field"><span class="lb">色</span><div class="swatches" id="fCol">'+COLORS.map(function(c){return '<button data-c="'+c+'" style="--c:var(--'+c+')" aria-label="色 '+c+'"></button>'}).join("")+"</div></div>"+
     '<div class="sheetact">'+(h?'<button class="danger" id="fDel">削除</button>':"")+'<button class="pill" id="fCancel" style="height:46px">閉じる</button><button class="primary" id="fSave">保存</button></div>'+
     "</div></div>";
   function paint(){
     [].forEach.call(root.querySelectorAll("#fDays button"),function(b){b.setAttribute("aria-pressed",!!days[b.dataset.i])});
     [].forEach.call(root.querySelectorAll("#fCol button"),function(b){b.setAttribute("aria-pressed",b.dataset.c===col)});
+    [].forEach.call(root.querySelectorAll("#fCat button"),function(b){b.setAttribute("aria-pressed",b.dataset.k===cat)});
   }
   paint();
   var name=$("fName");if(!h)setTimeout(function(){name.focus()},50);
   $("fDays").onclick=function(e){var b=e.target.closest("button");if(!b)return;days[b.dataset.i]=days[b.dataset.i]?0:1;paint()};
+  $("fCat").onclick=function(e){var b=e.target.closest("button");if(!b)return;cat=cat===b.dataset.k?"":b.dataset.k;paint()};
   root.querySelector(".presets").onclick=function(e){var b=e.target.closest("button");if(!b)return;var p=b.dataset.p;days=[0,1,2,3,4,5,6].map(function(i){return p==="all"?1:p==="wk"?(i>0&&i<6?1:0):p==="we"?(i===0||i===6?1:0):0});paint()};
   $("fCol").onclick=function(e){var b=e.target.closest("button");if(!b)return;col=b.dataset.c;paint()};
   function close(){root.innerHTML=""}
@@ -1126,8 +1148,10 @@ function openSheet(id){
     var n=name.value.trim();if(!n){name.focus();name.placeholder="名前を入れてください";return}
     var nid=id||("h"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
     var base=S.habits[nid]||{start:todayKey(),order:Date.now()};
-    S.habits[nid]=Object.assign({},base,{name:n,color:col,days:days.map(function(x){return x?1:0}),archived:false});
-    writeHabit(nid);close();render();
+    S.habits[nid]=Object.assign({},base,{name:n,color:col,days:days.map(function(x){return x?1:0}),archived:false,cat:cat});
+    writeHabit(nid);
+    if(pre.task&&S.tasks[pre.task]){delete S.tasks[pre.task];writeTask(pre.task)}
+    close();render();
   }
   $("fSave").onclick=save;
   name.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.isComposing)save()});
